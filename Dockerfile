@@ -30,8 +30,13 @@ RUN apt-get install -y \
 	less \
 	python-debian
 
-RUN sed -i /etc/bash.bashrc -e '/^PS1=/ s/^/#/'
-ENV PS1 '\h:\W\$ '
+###########################################
+# Set up environment
+
+# bash prompt and 'ls' alias
+RUN sed -i /etc/bash.bashrc \
+    -e 's/^PS1=.*/PS1="\\h:\\W\\$ "/' \
+    -e '$a alias ls="ls -aFs"'
 
 # docker create -h dev --name dev -it -u `id -u`:`id -g` -v $PWD:$PWD -w $PWD dev
 # docker start -ai dev
