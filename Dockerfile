@@ -30,13 +30,25 @@ RUN apt-get install -y \
 	less \
 	python-debian
 
+# Install and configure sudo, passwordless for everyone
+RUN apt-get -y install sudo
+RUN echo "ALL	ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers
+
 ###########################################
 # Set up environment
+
+# User entry
+ENV USER jman
+RUN echo "${USER}:x:1000:1000::/home/${USER}:/bin/bash" >> /etc/passwd
+RUN echo "${USER}:x:1000:" >> /etc/group
 
 # bash prompt and 'ls' alias
 RUN sed -i /etc/bash.bashrc \
     -e 's/^PS1=.*/PS1="\\h:\\W\\$ "/' \
     -e '$a alias ls="ls -aFs"'
+
+###########################################
+# Run the container
 
 # docker create -h dev --name dev -it -u `id -u`:`id -g` -v $PWD:$PWD -w $PWD dev
 # docker start -ai dev
