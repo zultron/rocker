@@ -64,4 +64,4 @@ RUN sed -i /etc/bash.bashrc \
 # docker start -ai dev
 #
 # or...
-# docker run --rm -h dev --name dev -it -u `id -u`:`id -g` -v $PWD:$PWD -v=/tmp/.X11-unix:/tmp/.X11-unix -w $PWD dev
+# docker run --rm -h dev --name dev -it -u `id -u`:`id -g` -v $PWD:$PWD -v=/tmp/.X11-unix:/tmp/.X11-unix -w $PWD -e DISPLAY -v /dev/dri:/dev/dri --privileged dev
