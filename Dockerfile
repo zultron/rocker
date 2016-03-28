@@ -21,14 +21,24 @@ RUN apt-get install -y libfile-fcntllock-perl
 ###########################################
 # Install packages
 
+# Basic dev tools
 RUN apt-get install -y \
 	git \
+	build-essential \
 	devscripts \
 	fakeroot \
 	equivs \
 	lsb-release \
 	less \
 	python-debian
+
+# Qt5
+RUN apt-get install -y \
+	qt5-qmake \
+	qtcreator \
+	qt5-default \
+	qt-sdk \
+	libqt5opengl5-dev
 
 # Install and configure sudo, passwordless for everyone
 RUN apt-get -y install sudo
@@ -54,4 +64,4 @@ RUN sed -i /etc/bash.bashrc \
 # docker start -ai dev
 #
 # or...
-# docker run --rm -h dev --name dev -it -u `id -u`:`id -g` -v $PWD:$PWD -w $PWD dev
+# docker run --rm -h dev --name dev -it -u `id -u`:`id -g` -v $PWD:$PWD -v=/tmp/.X11-unix:/tmp/.X11-unix -w $PWD dev
