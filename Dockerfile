@@ -30,7 +30,8 @@ RUN apt-get install -y \
 	equivs \
 	lsb-release \
 	less \
-	python-debian
+	python-debian \
+	libtool
 
 # Qt5
 RUN apt-get install -y \
@@ -39,6 +40,59 @@ RUN apt-get install -y \
 	qt5-default \
 	qt-sdk \
 	libqt5opengl5-dev
+
+# Qt4
+RUN apt-get install -y \
+	libqt4-dev \
+	libqt4-opengl-dev \
+	qt4-dev-tools \
+	libsoqt4-dev \
+	python-qt4
+
+# Boost
+RUN apt-get install -y \
+	libboost-dev \
+	libboost-filesystem-dev \
+	libboost-regex-dev \
+	libboost-program-options-dev \
+	libboost-signals-dev \
+	libboost-thread-dev \
+	libboost-python-dev
+
+# Python
+RUN apt-get install -y \
+	python-dev \
+	python-pyside \
+	pyside-tools
+
+# OCE
+RUN apt-get install -y \
+	liboce-foundation-dev \
+	liboce-modeling-dev \
+	liboce-ocaf-dev \
+	liboce-visualization-dev \
+	liboce-ocaf-lite-dev \
+	oce-draw
+
+# FreeCAD deps
+RUN apt-get install -y \
+	python-matplotlib \
+	libcoin80-dev \
+	libxerces-c-dev \
+	libeigen3-dev \
+	libqtwebkit-dev \
+	libshiboken-dev \
+	libpyside-dev \
+	libode-dev \
+	swig \
+	libzipios++-dev \
+	libfreetype6 \
+	libsimage-dev \
+	checkinstall \
+	python-pivy \
+	doxygen \
+	libcoin80-doc \
+	libspnav-dev
 
 # Install and configure sudo, passwordless for everyone
 RUN apt-get -y install sudo
