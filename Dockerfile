@@ -91,6 +91,7 @@ RUN apt-get install -y \
 	checkinstall \
 	python-pivy \
 	doxygen \
+	graphviz \
 	libcoin80-doc \
 	libspnav-dev
 
