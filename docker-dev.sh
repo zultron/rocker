@@ -3,12 +3,17 @@
 #
 # Git insulation
 #
-SUITE=trusty
+DEFAULT_SUITE=jessie
 #
 # Git insulation
 #
 
 # Parameters
+if test "$1" = -s; then
+    shift; SUITE=$1; shift
+else
+    SUITE=${SUITE-${DEFAULT_SUITE}}
+fi
 IMAGE=dev-${SUITE}
 NAME=${IMAGE}
 
