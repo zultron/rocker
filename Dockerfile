@@ -131,12 +131,3 @@ RUN echo "${USER}:x:1000:" >> /etc/group
 RUN sed -i /etc/bash.bashrc \
     -e 's/^PS1=.*/PS1="\\h:\\W\\$ "/' \
     -e '$a alias ls="ls -aFs"'
-
-###########################################
-# Run the container
-
-# docker create -h dev --name dev -it -u `id -u`:`id -g` -v $PWD:$PWD -w $PWD dev
-# docker start -ai dev
-#
-# or...
-# docker run --rm -h dev --name dev -it -u `id -u`:`id -g` -v $PWD:$PWD -v=/tmp/.X11-unix:/tmp/.X11-unix -w $PWD -e DISPLAY -v /dev/dri:/dev/dri --privileged dev
