@@ -95,6 +95,26 @@ RUN apt-get install -y \
 	libcoin80-doc \
 	libspnav-dev
 
+# LCNC deps
+RUN apt-get install -y \
+	autoconf \
+	libudev-dev \
+	libmodbus-dev \
+	libusb-1.0-0-dev \
+	libncurses5-dev \
+	libxaw7-dev \
+	libglib2.0-dev \
+	libgtk2.0-dev \
+	kmod \
+	psmisc \
+	bwidget \
+	libtk-img \
+	tclx \
+	tclxlibreadline-gplv2-dev \
+	tcl8.6-dev \
+	tk8.6-dev \
+	python-tk
+
 # Install and configure sudo, passwordless for everyone
 RUN apt-get -y install sudo
 RUN echo "ALL	ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers
