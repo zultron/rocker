@@ -110,7 +110,7 @@ RUN apt-get install -y \
 	bwidget \
 	libtk-img \
 	tclx \
-	tclxlibreadline-gplv2-dev \
+	libreadline-gplv2-dev \
 	tcl8.6-dev \
 	tk8.6-dev \
 	python-tk
