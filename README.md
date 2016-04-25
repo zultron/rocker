@@ -25,6 +25,8 @@ otherwise specified on the command-line (e.g. `-s trusty`), in the
 following way:
 
 - The container will be named after the image, e.g. `dev-jessie`
+- The home directory `$HOME` will be bind-mounted in the same location
+  within the container
 - The current directory will be bind-mounted in the same location
   within the container, and the shell will start there
 - The user and group ID will be set inside same as outside
