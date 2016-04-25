@@ -113,7 +113,8 @@ RUN apt-get install -y \
 	libreadline-gplv2-dev \
 	tcl8.6-dev \
 	tk8.6-dev \
-	python-tk
+	python-tk \
+	netcat-openbsd
 
 # Install and configure sudo, passwordless for everyone
 RUN apt-get -y install sudo
