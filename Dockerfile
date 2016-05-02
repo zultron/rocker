@@ -114,6 +114,7 @@ RUN apt-get install -y \
 	tcl8.6-dev \
 	tk8.6-dev \
 	python-gtk2 \
+	python-glade2 \
 	python-tk \
 	netcat-openbsd
 
