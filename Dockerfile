@@ -113,6 +113,7 @@ RUN apt-get install -y \
 	libreadline-gplv2-dev \
 	tcl8.6-dev \
 	tk8.6-dev \
+	python-gtk2 \
 	python-tk \
 	netcat-openbsd
 
