@@ -118,6 +118,28 @@ RUN apt-get install -y \
 	python-tk \
 	netcat-openbsd
 
+# MK deps
+RUN echo "deb http://deb.machinekit.io/debian ${SUITE} main" > \
+	/etc/apt/sources.list.d/machinekit.list
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 43DDF224
+RUN apt-get update
+RUN apt-get install -y \
+	automake \
+	cython \
+	uuid-dev \
+	uuid-runtime \
+	libzmq3-dev \
+	libczmq-dev \
+	libprotobuf-dev \
+	protobuf-compiler \
+	python-protobuf \
+	libjansson-dev \
+	liburiparser-dev \
+	libwebsockets-dev \
+	libssl-dev \
+	libavahi-client-dev \
+	python-pyftpdlib
+
 # Install and configure sudo, passwordless for everyone
 RUN apt-get -y install sudo
 RUN echo "ALL	ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers
