@@ -116,7 +116,8 @@ RUN apt-get install -y \
 	python-gtk2 \
 	python-glade2 \
 	python-tk \
-	netcat-openbsd
+	netcat-openbsd \
+	libpth20
 
 # MK deps
 RUN echo "deb http://deb.machinekit.io/debian ${SUITE} main" > \
