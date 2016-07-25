@@ -141,6 +141,10 @@ RUN apt-get install -y \
 	libavahi-client-dev \
 	python-pyftpdlib
 
+# Scan Tailor
+RUN apt-get install -y \
+	libboost-all-dev
+
 # Install and configure sudo, passwordless for everyone
 RUN apt-get -y install sudo
 RUN echo "ALL	ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers
