@@ -119,12 +119,13 @@ RUN apt-get install -y \
 	netcat-openbsd \
 	libpth20
 
-# MK deps
-RUN echo "deb http://deb.machinekit.io/debian ${SUITE} main" > \
-	/etc/apt/sources.list.d/machinekit.list
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 43DDF224
-RUN apt-get update
-RUN apt-get install -y \
+# MK deps; not on Ubuntu
+RUN test ${SUITE} = trusty || { \
+    echo "deb http://deb.machinekit.io/debian ${SUITE} main" > \
+	/etc/apt/sources.list.d/machinekit.list && \
+    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 43DDF224 && \
+    apt-get update && \
+    apt-get install -y \
 	automake \
 	cython \
 	uuid-dev \
@@ -139,7 +140,8 @@ RUN apt-get install -y \
 	libwebsockets-dev \
 	libssl-dev \
 	libavahi-client-dev \
-	python-pyftpdlib
+	python-pyftpdlib; \
+    }
 
 # Scan Tailor
 RUN apt-get install -y \
