@@ -145,7 +145,10 @@ RUN test ${SUITE} = trusty || { \
 
 # Scan Tailor
 RUN apt-get install -y \
-	libboost-all-dev
+	libboost-all-dev \
+	tesseract-ocr \
+	tesseract-ocr-eng \
+	tesseract-ocr-deu
 
 # Install and configure sudo, passwordless for everyone
 RUN apt-get -y install sudo
