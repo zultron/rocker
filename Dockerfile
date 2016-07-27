@@ -18,8 +18,14 @@ RUN apt-get upgrade -y
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get install -y libfile-fcntllock-perl
 
+# Install and configure sudo, passwordless for everyone
+RUN apt-get -y install sudo
+RUN echo "ALL	ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers
+
 ###########################################
 # Install packages
+#
+# Customize the following for building/running targeted software
 
 # Basic dev tools
 RUN apt-get install -y \
@@ -150,19 +156,23 @@ RUN apt-get install -y \
 	tesseract-ocr-eng \
 	tesseract-ocr-deu
 
-# Install and configure sudo, passwordless for everyone
-RUN apt-get -y install sudo
-RUN echo "ALL	ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers
-
 ###########################################
 # Set up environment
+#
+# Customize the following to match the user's environment
 
-# User entry
+# Set up user ID inside container to match your ID
 ENV USER jman
-RUN echo "${USER}:x:1000:1000::/home/${USER}:/bin/bash" >> /etc/passwd
-RUN echo "${USER}:x:1000:" >> /etc/group
+ENV UID 1000
+ENV GID 1000
+ENV HOME /home/${USER}
+ENV SHELL /bin/bash
+RUN echo "${USER}:x:${UID}:${GID}::${HOME}:${SHELL}" >> /etc/passwd
+RUN echo "${USER}:x:${GID}:" >> /etc/group
 
-# bash prompt and 'ls' alias
+# Customize the run environment to your taste
+# - bash prompt
+# - 'ls' alias
 RUN sed -i /etc/bash.bashrc \
     -e 's/^PS1=.*/PS1="\\h:\\W\\$ "/' \
     -e '$a alias ls="ls -aFs"'
