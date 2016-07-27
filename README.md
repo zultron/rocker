@@ -1,8 +1,12 @@
 # Docker dev container
 
-This Dockerfile builds images with the basic tools for developing
-LinuxCNC/Machinekit and FreeCAD.  The `master` branch builds Debian
-Jessie-based images, and `trusty` builds Ubuntu Trusty-based images.
+A Dockerfile for images with basic software build tools.  The `master`
+branch builds Debian Jessie-based images, and `trusty` builds Ubuntu
+Trusty-based images.
+
+Out of the box, packages are installed to build and run
+LinuxCNC/Machinekit, FreeCAD and Scan Tailor.  The Dockerfile is
+easily modified to support other software.
 
 ## Building
 
