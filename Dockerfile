@@ -125,6 +125,10 @@ RUN apt-get install -y \
 	netcat-openbsd \
 	libpth20
 
+# PathPilot
+RUN apt-get install -y \
+	redis-server
+
 # MK deps; not on Ubuntu
 RUN test ${SUITE} = trusty || { \
     echo "deb http://deb.machinekit.io/debian ${SUITE} main" > \
