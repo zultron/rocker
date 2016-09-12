@@ -4,7 +4,6 @@ MAINTAINER John Morris <john@zultron.com>
 # These variables configure the build.
 #
 ENV SUITE jessie
-ENV ARCH  amd64
 #
 # [Leave surrounding comments to eliminate merge conflicts]
 #
