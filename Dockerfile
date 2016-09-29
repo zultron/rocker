@@ -36,7 +36,8 @@ RUN apt-get install -y \
 	lsb-release \
 	less \
 	python-debian \
-	libtool
+	libtool \
+	ccache
 
 # Qt5
 RUN apt-get install -y \
@@ -170,6 +171,7 @@ ENV UID 1000
 ENV GID 1000
 ENV HOME /home/${USER}
 ENV SHELL /bin/bash
+ENV PATH /usr/lib/ccache:$PATH
 RUN echo "${USER}:x:${UID}:${GID}::${HOME}:${SHELL}" >> /etc/passwd
 RUN echo "${USER}:x:${GID}:" >> /etc/group
 
