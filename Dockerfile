@@ -150,7 +150,12 @@ RUN test ${SUITE} = trusty || { \
 	libwebsockets-dev \
 	libssl-dev \
 	libavahi-client-dev \
-	python-pyftpdlib; \
+	python-pyftpdlib \
+	python-zmq \
+	python-setuptools \
+	libprotoc-dev \
+	python-simplejson \
+	libxenomai-dev; \
     }
 
 # Scan Tailor
