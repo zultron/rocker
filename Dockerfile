@@ -160,6 +160,10 @@ RUN apt-get install -y \
 	tesseract-ocr-eng \
 	tesseract-ocr-deu
 
+# libpgm
+RUN apt-get install -y \
+        dh-autoreconf
+
 ###########################################
 # Set up environment
 #
