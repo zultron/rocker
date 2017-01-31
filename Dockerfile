@@ -123,7 +123,13 @@ RUN apt-get install -y \
 	python-glade2 \
 	python-tk \
 	netcat-openbsd \
-	libpth20
+	libpth20 \
+	python-gtksourceview2 \
+	python-gtkglext1 \
+	python-vte \
+	python-gst0.10 \
+	gnome-icon-theme \
+	gstreamer0.10-plugins-base
 
 # PathPilot
 RUN apt-get install -y \
@@ -168,6 +174,14 @@ RUN apt-get install -y \
 # libpgm
 RUN apt-get install -y \
         dh-autoreconf
+
+# Python debugging
+RUN apt-get install -y \
+	python-pip
+RUN pip install -U \
+	pip \
+	setuptools \
+	pylint
 
 ###########################################
 # Set up environment
