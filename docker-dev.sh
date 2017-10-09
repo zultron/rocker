@@ -17,6 +17,11 @@ fi
 IMAGE=dev-${SUITE}
 NAME=${IMAGE}
 
+if test "$1" = build; then
+    shift
+    exec docker build -t dev-${SUITE} "$@" .
+fi
+
 # Check for existing containers
 EXISTING="$(docker ps -aq --filter=name=${NAME})"
 if test -n "${EXISTING}"; then
