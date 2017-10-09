@@ -3,7 +3,7 @@
 #
 # Git insulation
 #
-DEFAULT_SUITE=jessie
+DEFAULT_SUITE=stretch
 #
 # Git insulation
 #

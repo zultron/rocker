@@ -1,9 +1,9 @@
-FROM debian:jessie
+FROM debian:stretch
 MAINTAINER John Morris <john@zultron.com>
 #
 # These variables configure the build.
 #
-ENV SUITE jessie
+ENV SUITE stretch
 #
 # [Leave surrounding comments to eliminate merge conflicts]
 #
@@ -12,19 +12,32 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN echo 'APT::Install-Recommends "0";\nAPT::Install-Suggests "0";' > \
         /etc/apt/apt.conf.d/01norecommend
 RUN apt-get update
-RUN apt-get upgrade -y
+RUN apt-get upgrade -y && \
+    apt-get clean
 # silence debconf warnings
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get install -y libfile-fcntllock-perl
+RUN apt-get install -y \
+    libfile-fcntllock-perl && \
+    apt-get clean
 
 # Install and configure sudo, passwordless for everyone
-RUN apt-get -y install sudo
+RUN apt-get install -y \
+    sudo && \
+    apt-get clean
 RUN echo "ALL	ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 ###########################################
 # Install packages
 #
 # Customize the following for building/running targeted software
+
+# Utilities needed later
+RUN apt-get install -y \
+    gnupg2 \
+    dirmngr \
+    curl && \
+    apt-get clean
+
 
 # Basic dev tools
 RUN apt-get install -y \
@@ -37,7 +50,8 @@ RUN apt-get install -y \
 	less \
 	python-debian \
 	libtool \
-	ccache
+	ccache && \
+    apt-get clean
 
 # Qt5
 RUN apt-get install -y \
@@ -45,7 +59,8 @@ RUN apt-get install -y \
 	qtcreator \
 	qt5-default \
 	qt-sdk \
-	libqt5opengl5-dev
+	libqt5opengl5-dev && \
+    apt-get clean
 
 # Qt4
 RUN apt-get install -y \
@@ -53,7 +68,8 @@ RUN apt-get install -y \
 	libqt4-opengl-dev \
 	qt4-dev-tools \
 	libsoqt4-dev \
-	python-qt4
+	python-qt4 && \
+    apt-get clean
 
 # Boost
 RUN apt-get install -y \
@@ -63,13 +79,15 @@ RUN apt-get install -y \
 	libboost-program-options-dev \
 	libboost-signals-dev \
 	libboost-thread-dev \
-	libboost-python-dev
+	libboost-python-dev && \
+    apt-get clean
 
 # Python
 RUN apt-get install -y \
 	python-dev \
 	python-pyside \
-	pyside-tools
+	pyside-tools && \
+    apt-get clean
 
 # OCE
 RUN apt-get install -y \
@@ -78,7 +96,8 @@ RUN apt-get install -y \
 	liboce-ocaf-dev \
 	liboce-visualization-dev \
 	liboce-ocaf-lite-dev \
-	oce-draw
+	oce-draw && \
+    apt-get clean
 
 # FreeCAD deps
 RUN apt-get install -y \
@@ -99,7 +118,8 @@ RUN apt-get install -y \
 	doxygen \
 	graphviz \
 	libcoin80-doc \
-	libspnav-dev
+	libspnav-dev && \
+    apt-get clean
 
 # LCNC deps
 RUN apt-get install -y \
@@ -127,19 +147,25 @@ RUN apt-get install -y \
 	python-gtksourceview2 \
 	python-gtkglext1 \
 	python-vte \
-	python-gst0.10 \
-	gnome-icon-theme \
-	gstreamer0.10-plugins-base
+	gnome-icon-theme && \
+    apt-get clean
 
 # PathPilot
 RUN apt-get install -y \
-	redis-server
+	redis-server && \
+    apt-get clean
 
 # MK deps; not on Ubuntu
+#
+# FIXME temp changes until Stretch has support
+# RUN test ${SUITE} = trusty || { \
+#     echo "deb http://deb.machinekit.io/debian ${SUITE} main" > \
+# 	/etc/apt/sources.list.d/machinekit.list && \
+#     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 43DDF224 && \
 RUN test ${SUITE} = trusty || { \
-    echo "deb http://deb.machinekit.io/debian ${SUITE} main" > \
+    echo "deb http://deb.mgware.co.uk ${SUITE} main" > \
 	/etc/apt/sources.list.d/machinekit.list && \
-    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 43DDF224 && \
+    curl http://deb.mgware.co.uk/arceye@mgware.co.uk.gpg.key | apt-key add - && \
     apt-get update && \
     apt-get install -y \
 	automake \
@@ -160,24 +186,28 @@ RUN test ${SUITE} = trusty || { \
 	python-zmq \
 	python-setuptools \
 	libprotoc-dev \
-	python-simplejson \
-	libxenomai-dev; \
+	python-simplejson && \
+    apt-get clean; \
     }
+#	libxenomai-dev
 
 # Scan Tailor
 RUN apt-get install -y \
 	libboost-all-dev \
 	tesseract-ocr \
 	tesseract-ocr-eng \
-	tesseract-ocr-deu
+	tesseract-ocr-deu && \
+    apt-get clean
 
 # libpgm
 RUN apt-get install -y \
-        dh-autoreconf
+        dh-autoreconf && \
+    apt-get clean
 
 # Python debugging
 RUN apt-get install -y \
-	python-pip
+	python-pip && \
+    apt-get clean
 RUN pip install -U \
 	pip \
 	setuptools \
