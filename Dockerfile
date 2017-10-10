@@ -59,8 +59,17 @@ RUN apt-get install -y \
 	qtcreator \
 	qt5-default \
 	qt-sdk \
-	libqt5opengl5-dev && \
-    apt-get clean
+	libqt5opengl5-dev \
+	qtdeclarative5-dev \
+	qtdeclarative5-dev-tools \
+	qttools5-dev-tools \
+	qml-module-qtquick-extras \
+	qml-module-qtquick-dialogs \
+	qml-module-qt-labs-folderlistmodel \
+	qml-module-qt-labs-settings \
+	qml-module-qtquick-xmllistmodel \
+	qml-module-qtquick-particles2 \
+    && apt-get clean
 
 # Qt4
 RUN apt-get install -y \
