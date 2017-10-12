@@ -69,6 +69,7 @@ RUN apt-get install -y \
 	qml-module-qt-labs-settings \
 	qml-module-qtquick-xmllistmodel \
 	qml-module-qtquick-particles2 \
+	qmlscene \
     && apt-get clean
 
 # Qt4
