@@ -70,6 +70,8 @@ RUN apt-get install -y \
 	qml-module-qtquick-xmllistmodel \
 	qml-module-qtquick-particles2 \
 	qmlscene \
+	qbs \
+	qbs-dev \
     && apt-get clean
 
 # Qt4
