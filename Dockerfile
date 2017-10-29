@@ -80,6 +80,7 @@ RUN apt-get install -y \
 	libqt4-opengl-dev \
 	qt4-dev-tools \
 	libsoqt4-dev \
+	qt4-qmlviewer \
 	python-qt4 && \
     apt-get clean
 
