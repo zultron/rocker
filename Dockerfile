@@ -35,8 +35,9 @@ RUN echo "ALL	ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers
 RUN apt-get install -y \
     gnupg2 \
     dirmngr \
-    curl && \
-    apt-get clean
+    curl \
+    wget \
+    && apt-get clean
 
 
 # Basic dev tools
