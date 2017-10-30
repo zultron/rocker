@@ -172,15 +172,10 @@ RUN apt-get install -y \
 
 # MK deps; not on Ubuntu
 #
-# FIXME temp changes until Stretch has support
-# RUN test ${SUITE} = trusty || { \
-#     echo "deb http://deb.machinekit.io/debian ${SUITE} main" > \
-# 	/etc/apt/sources.list.d/machinekit.list && \
-#     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 43DDF224 && \
 RUN test ${SUITE} = trusty || { \
-    echo "deb http://deb.mgware.co.uk ${SUITE} main" > \
+    echo "deb http://deb.machinekit.io/debian ${SUITE} main" > \
 	/etc/apt/sources.list.d/machinekit.list && \
-    curl http://deb.mgware.co.uk/arceye@mgware.co.uk.gpg.key | apt-key add - && \
+    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 43DDF224 && \
     apt-get update && \
     apt-get install -y \
 	automake \
