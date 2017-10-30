@@ -72,6 +72,7 @@ RUN apt-get install -y \
 	qmlscene \
 	qbs \
 	qbs-dev \
+	libqt5svg5-dev \
     && apt-get clean
 
 # Qt4
