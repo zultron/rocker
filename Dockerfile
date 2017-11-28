@@ -223,6 +223,11 @@ RUN pip install -U \
 	setuptools \
 	pylint
 
+# Coreboot
+RUN apt-get install -y \
+	gnat flex bison wget \
+    && apt-get clean
+
 ###########################################
 # Set up environment
 #
