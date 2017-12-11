@@ -162,8 +162,9 @@ RUN apt-get install -y \
 	python-gtksourceview2 \
 	python-gtkglext1 \
 	python-vte \
-	gnome-icon-theme && \
-    apt-get clean
+	gnome-icon-theme \
+	intltool \
+    && apt-get clean
 
 # PathPilot
 RUN apt-get install -y \
