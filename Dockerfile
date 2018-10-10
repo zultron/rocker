@@ -197,7 +197,9 @@ RUN test ${SUITE} = trusty || { \
 	python-zmq \
 	python-setuptools \
 	libprotoc-dev \
-	python-simplejson && \
+	python-simplejson \
+        libcgroup-dev \
+    && \
     apt-get clean; \
     }
 #	libxenomai-dev
