@@ -1,48 +1,63 @@
 # Docker dev container
 
-A Dockerfile for images with basic software build tools.  The `master`
-branch builds Debian Jessie-based images, and `trusty` builds Ubuntu
-Trusty-based images.
+A Dockerfile for images with basic software build tools.
 
 Out of the box, packages are installed to build and run
-LinuxCNC/Machinekit, FreeCAD and Scan Tailor.  The Dockerfile is
+LinuxCNC/Machinekit, FreeCAD and some others.  The Dockerfile is
 easily modified to support other software.
 
 ## Building
 
-To build the image, check out the desired branch, then:
+To build the image for Debian Squeeze (default), run
 
-	./build.sh
+	./docker-dev.sh -b
 
-This will build a Docker image, `dev-${SUITE}` (default:
-`dev-jessie`).
+or for Ubuntu Xenial, run
+
+    ./docker-dev.sh -b -s xenial
 
 ## Running
 
-To run the image, `cd` to the directory containing the code under
-development, and:
+To run the image, `cd` to the source code tree, and to build for
+Debian Squeeze (default), run
 
-	[...]/docker-dev.sh [-s ${SUITE}]
+	[...]/docker-dev.sh
 
-This will run a shell in the container, default `dev-jessie` unless
-otherwise specified on the command-line (e.g. `-s trusty`), in the
-following way:
+or for Ubuntu Xenial, run
 
-- The container will be named after the image, e.g. `dev-jessie`
+    [...]/docker-dev.sh -s xenial
+
+This will run a shell in the container in the following way:
+
+- The container will be named after the Debian or Ubuntu suite,
+  e.g. `dev-stretch`
+  - The container name may be overridden with the `-n NAME` argument
 - The home directory `$HOME` will be bind-mounted in the same location
   within the container
 - The current directory will be bind-mounted in the same location
   within the container, and the shell will start there
-- The user and group ID will be set inside same as outside
 - So that X clients may run from within the container, the X11 socket
   and DRI directories will be bind-mounted, the `$DISPLAY` variable
   will be set, and the container will run privileged
+- The entrypoint script will run as root
+  - It may optionally be customized to start system services within
+    the container
+  - It adds a new user and group within the container to match those
+    outside so that things work sensibly, e.g. file ownership
 - When the container exits, it will be destroyed; nothing will persist
   to the next run except the contents of the bind-mounted directory
 
 The script runs an interactive `bash` shell by default.  A command
 with args may also be specified, for example:
 
-	$ [...]/docker-dev.sh -s trusty bash -c 'echo $SUITE'
-	trusty
+	$ [...]/docker-dev.sh -s xenial bash -c 'echo $SUITE'
+	xenial
 
+To start an additional shell in the running Stretch (default)
+container, run
+
+    [...]/docker-dev.sh -e
+
+or to run a command in the running Xenial container, run
+
+    [...]/docker-dev.sh -en xenial cmd arg1 arg2

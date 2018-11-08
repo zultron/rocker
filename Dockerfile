@@ -1,14 +1,24 @@
-FROM debian:stretch
+ARG VENDOR=debian
+ARG SUITE=stretch
+
+FROM ${VENDOR}:${SUITE}
 MAINTAINER John Morris <john@zultron.com>
 #
 # These variables configure the build.
 #
-ENV SUITE stretch
-#
-# [Leave surrounding comments to eliminate merge conflicts]
+ARG VENDOR=debian
+ARG SUITE=stretch
 #
 # Configure & update apt
-ENV DEBIAN_FRONTEND noninteractive
+ARG DEBIAN_MIRROR
+ARG DEBIAN_SECURITY_MIRROR
+#ENV DEBIAN_FRONTEND noninteractive
+RUN test -z "${DEBIAN_MIRROR}" || bash -c "( \
+        echo deb http://${DEBIAN_MIRROR}/debian ${DEBIAN_SUITE} main; \
+        echo deb http://${DEBIAN_MIRROR}/debian ${DEBIAN_SUITE}-updates main; \
+        echo deb http://${DEBIAN_SECURITY_MIRROR}/debian-security \
+            ${DEBIAN_SUITE}/updates main; \
+        ) | tee /etc/apt/sources.list"
 RUN echo 'APT::Install-Recommends "0";\nAPT::Install-Suggests "0";' > \
         /etc/apt/apt.conf.d/01norecommend
 RUN apt-get update
@@ -17,14 +27,18 @@ RUN apt-get upgrade -y && \
 # silence debconf warnings
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get install -y \
-    libfile-fcntllock-perl && \
-    apt-get clean
+    libfile-fcntllock-perl \
+    apt-utils \
+    && apt-get clean
 
 # Install and configure sudo, passwordless for everyone
 RUN apt-get install -y \
     sudo && \
     apt-get clean
 RUN echo "ALL	ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+# Cookie variable for container environment
+ENV ENV_COOKIE docker
 
 ###########################################
 # Install packages
@@ -173,7 +187,7 @@ RUN apt-get install -y \
 
 # MK deps; not on Ubuntu
 #
-RUN test ${SUITE} = trusty || { \
+RUN test ${VENDOR} = ubuntu || { \
     echo "deb http://deb.machinekit.io/debian ${SUITE} main" > \
 	/etc/apt/sources.list.d/machinekit.list && \
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 43DDF224 && \
@@ -219,9 +233,10 @@ RUN apt-get install -y \
 
 # Python debugging
 RUN apt-get install -y \
-	python-pip && \
-    apt-get clean
-RUN pip install -U \
+	python-pip \
+    && apt-get clean
+RUN test ${VENDOR} = ubuntu || \
+    pip install -U \
 	pip \
 	setuptools \
 	pylint
@@ -231,24 +246,20 @@ RUN apt-get install -y \
 	gnat flex bison wget \
     && apt-get clean
 
+# Extra packages
+ARG EXTRA_PACKAGES
+RUN test -z "${EXTRA_PACKAGES}" || { \
+        apt-get install -y ${EXTRA_PACKAGES} \
+        && apt-get clean; \
+    }
+
+
 ###########################################
-# Set up environment
+# Set up user
 #
-# Customize the following to match the user's environment
 
-# Set up user ID inside container to match your ID
-ENV USER jman
-ENV UID 1000
-ENV GID 1000
-ENV HOME /home/${USER}
-ENV SHELL /bin/bash
-ENV PATH /usr/lib/ccache:$PATH
-RUN echo "${USER}:x:${UID}:${GID}::${HOME}:${SHELL}" >> /etc/passwd
-RUN echo "${USER}:x:${GID}:" >> /etc/group
-
-# Customize the run environment to your taste
-# - bash prompt
-# - 'ls' alias
-RUN sed -i /etc/bash.bashrc \
-    -e 's/^PS1=.*/PS1="\\h:\\W\\$ "/' \
-    -e '$a alias ls="ls -aFs"'
+# This shell script adds passwd and group entries for the user
+COPY entrypoint.sh /usr/bin/entrypoint
+ENTRYPOINT ["/usr/bin/entrypoint"]
+# If no args to `docker run`, start an interactive shell
+CMD ["/bin/bash", "--login", "-i"]
