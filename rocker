@@ -1,0 +1,74 @@
+#!/bin/bash -e
+
+# Host UID/GID
+HUID=$(id -u)
+HGID=$(id -g)
+
+# Image name from command line
+IMAGE=$1; shift
+
+# Custom entrypoint
+ENTRYPOINT=$(dirname $0)/rocker_entrypoint
+
+usage() {
+    if test -z "$*"; then
+        RC=0
+    else
+        echo "Error:  $*" >&2
+        RC=1
+    fi
+    cat >&2 <<EOF
+Usage: $0 [-n NAME] IMAGE [COMMAND [ARGS...]]
+      -n NAME:  Set container name and hostname to NAME (default: rocker)
+      IMAGE:    Docker image tag to run
+      COMMAND:  Command to run (default:  /bin/bash)
+      ARGS:     Command arguments
+EOF
+    exit $RC
+}
+
+NAME=rocker
+while getopts :n: ARG; do
+    case $ARG in
+    # Run options
+    n) NAME=$OPTARG ;;
+    # Usage
+    h) usage ;;
+    :) usage "Option -$OPTARG requires an argument" ;;
+    *) usage "Illegal option -$OPTARG" ;;
+    esac
+done
+shift $(($OPTIND - 1))
+
+DOCKER_RUN_ARGS=(
+    -it --rm
+    # container & host names
+    --name $NAME
+    -h $NAME
+    # user config
+    -e HUID=$HUID
+    -e HGID=$HGID
+    -e HHOME=$HOME
+    -e HUSER=$USER
+    -e XDG_RUNTIME_DIR
+    -v $XDG_RUNTIME_DIR:$XDG_RUNTIME_DIR
+    -v $HOME:$HOME
+    # display
+    -e TERM
+    -e DISPLAY
+    -v /tmp/.X11-unix:/tmp/.X11-unix
+    -v /dev/dri:/dev/dri
+    # audio
+    -v /run/user/$HUID/pulse:/run/user/$HUID/pulse
+    # container start-up config
+    -w $PWD
+    -v $ENTRYPOINT:/usr/bin/entrypoint
+    --entrypoint /usr/bin/entrypoint
+    --init
+)
+
+set -x
+exec docker run \
+    "${DOCKER_RUN_ARGS[@]}" \
+    $IMAGE "$@"
+

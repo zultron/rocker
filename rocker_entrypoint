@@ -1,0 +1,25 @@
+#!/bin/bash -e
+
+# add hostname to hosts
+sh -c 'echo "127.0.2.1  `hostname`" >> /etc/hosts'
+
+# Add user and group to system
+sed -i /etc/passwd -e "/^${HUSER}:/ d" # Clean stale entries
+echo "${HUSER}:x:${HUID}:${HGID}::${HHOME}:/bin/bash" >>/etc/passwd
+sed -i /etc/group -e "/^${HUSER}:/ d" # Clean stale entries
+echo "${HUSER}:x:${HGID}:" >>/etc/group
+GRPS=(sudo dialout plugdev video ethercat)
+for GRP in "${GRPS[@]}"; do
+    sed -i "/^${GRP}:/ s/:[^:]*\$/:${HUSER}/" /etc/group
+done
+
+# Set environment
+export HOME=$HHOME
+export USER=$HUSER
+
+# Clean up
+unset HUID HGID HHOME HUSER
+
+# Run command as user
+default_cmd=(/bin/bash --login -i)
+exec sudo -u ${USER} -E "${@:-${default_cmd[@]}}"
