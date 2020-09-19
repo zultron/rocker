@@ -16,28 +16,10 @@ EOF
     exit $RC
 }
 
-BASE_IMAGE=$1; shift
-IMAGE_TAG=${BASE_IMAGE}_overlay
-while getopts :t: ARG; do
-    case $ARG in
-    t) IMAGE_TAG=$OPTARG ;;
-    # Usage
-    h) usage ;;
-    :) usage "Option -$OPTARG requires an argument" ;;
-    *) usage "Illegal option -$OPTARG" ;;
-    esac
-done
-shift $(($OPTIND - 1))
-
-
-BUILD_ARGS=(
-    --build-arg BASE_IMAGE=$BASE_IMAGE
-    --tag $IMAGE_TAG
-    )
-
-docker build "${BUILD_ARGS[@]}" - <<EOF
+dockerfile_base() {
+    cat <<EOF
 ARG BASE_IMAGE
-FROM ${BASE_IMAGE}
+FROM \${BASE_IMAGE}
 
 RUN apt-get update \
     && apt-get install -y python-pip \
@@ -59,3 +41,54 @@ RUN apt-get update \
     && apt-get clean
 
 EOF
+}
+
+dockerfile_workspace() {
+    cat <<EOF
+    COPY . /tmp/ros_ws
+    RUN cd /tmp/ros_ws \
+	&& ls -l \
+	&& rosdep install -y --rosdistro \$ROS_DISTRO --ignore-src --from-paths src
+
+EOF
+}
+
+BASE_IMAGE=$1; shift
+IMAGE_TAG=${BASE_IMAGE}_overlay
+WORKSPACE_DEPS=false
+CONTEXT_DIR=""
+while getopts :t:wh ARG; do
+    case $ARG in
+    t) IMAGE_TAG=$OPTARG ;;
+    w) WORKSPACE_DEPS=true; CONTEXT_DIR=$(pwd) ;;
+    # Usage
+    h) usage ;;
+    :) usage "Option -$OPTARG requires an argument" ;;
+    *) usage "Illegal option -$OPTARG" ;;
+    esac
+done
+shift $(($OPTIND - 1))
+
+BUILD_ARGS=(
+    --build-arg BASE_IMAGE=$BASE_IMAGE
+    --tag $IMAGE_TAG
+    )
+
+if test -n "$CONTEXT_DIR"; then
+    BUILD_ARGS+=(
+	-f -
+	$CONTEXT_DIR
+    )
+else
+    BUILD_ARGS+=( - )
+fi
+
+{
+    dockerfile_base
+    if $WORKSPACE_DEPS; then
+	dockerfile_workspace
+    fi
+} | {
+    set -x
+    exec docker build "${BUILD_ARGS[@]}"
+}
