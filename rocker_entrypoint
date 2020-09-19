@@ -20,6 +20,12 @@ export USER=$HUSER
 # Clean up
 unset HUID HGID HHOME HUSER
 
+# Ronconsole config
+if test -f .rosconsole.config; then
+    export ROSCONSOLE_CONFIG_FILE=$(pwd)/.rosconsole.config
+fi
+export ROSCONSOLE_FORMAT='[${severity}] [${time}] [${node}] [${logger}]: ${message}'
+
 # Run command as user
 default_cmd=(/bin/bash --login -i)
 exec sudo -u ${USER} -E "${@:-${default_cmd[@]}}"
