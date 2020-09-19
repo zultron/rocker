@@ -41,12 +41,21 @@ FROM ${BASE_IMAGE}
 
 RUN apt-get update \
     && apt-get install -y python-pip \
+    && apt-get clean \
     && pip install catkin-tools
 
 RUN echo "%sudo ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers.d/50-nopass \
     && chmod 600 /etc/sudoers.d/50-nopass
 
 RUN apt-get update \
-    && apt-get install -y ccache
+    && apt-get install -y \
+        ccache \
+	clang \
+	clang-tidy \
+	clang-tools \
+	gdb \
+	xterm \
+	wget \
+    && apt-get clean
 
 EOF
