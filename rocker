@@ -4,12 +4,6 @@
 HUID=$(id -u)
 HGID=$(id -g)
 
-# Image name from command line
-IMAGE=$1; shift
-
-# Custom entrypoint
-ENTRYPOINT=$(dirname $0)/rocker_entrypoint
-
 usage() {
     if test -z "$*"; then
         RC=0
@@ -26,6 +20,14 @@ Usage: $0 [-n NAME] IMAGE [COMMAND [ARGS...]]
 EOF
     exit $RC
 }
+
+# Image name from command line
+IMAGE=$1
+test -n "$IMAGE" || usage "No image specified"
+shift
+
+# Custom entrypoint
+ENTRYPOINT=$(dirname $0)/rocker_entrypoint
 
 NAME=rocker
 while getopts :n: ARG; do
