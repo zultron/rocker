@@ -12,41 +12,50 @@ usage() {
         RC=1
     fi
     cat >&2 <<EOF
-Usage: $0 [-n NAME] IMAGE [COMMAND [ARGS...]]
+Usage: $0 [-n NAME] [-i IMAGE] [COMMAND [ARGS...]]
       -n NAME:  Set container name and hostname to NAME (default: rocker)
-      IMAGE:    Docker image tag to run
+      -i IMAGE: Docker image tag to run
       COMMAND:  Command to run (default:  /bin/bash)
       ARGS:     Command arguments
 EOF
     exit $RC
 }
 
-# Image name from command line
-IMAGE=$1
-test -n "$IMAGE" || usage "No image specified"
-shift
-
 # Custom entrypoint
 ENTRYPOINT=$(dirname $0)/rocker_entrypoint
 
-NAME=rocker
-while getopts :n: ARG; do
+# Defaults
+ROCKER_NAME=${ROCKER_NAME:-rocker}
+
+# Read from any .rocker config
+if test -f $(pwd)/.rocker; then
+    source $(pwd)/.rocker
+fi
+
+# Command line overrides .rocker config
+while getopts :n:i: ARG; do
     case $ARG in
-    # Run options
-    n) NAME=$OPTARG ;;
-    # Usage
-    h) usage ;;
-    :) usage "Option -$OPTARG requires an argument" ;;
-    *) usage "Illegal option -$OPTARG" ;;
+	# Run options
+	n) ROCKER_NAME=$OPTARG ;;
+	i) ROCKER_IMAGE_TAG=$OPTARG ;;
+	# Usage
+	h) usage ;;
+	:) usage "Option -$OPTARG requires an argument" ;;
+	*) usage "Illegal option -$OPTARG" ;;
     esac
 done
 shift $(($OPTIND - 1))
 
+# Check arguments
+test -n "$ROCKER_IMAGE_TAG" || usage "No image tag specified"
+
+# Construct `docker run` args
 DOCKER_RUN_ARGS=(
+    docker run
     -it --rm
     # container & host names
-    --name $NAME
-    -h $NAME
+    --name $ROCKER_NAME
+    -h $ROCKER_NAME
     # user config
     -e HUID=$HUID
     -e HGID=$HGID
@@ -67,10 +76,10 @@ DOCKER_RUN_ARGS=(
     -v $ENTRYPOINT:/usr/bin/entrypoint
     --entrypoint /usr/bin/entrypoint
     --init
+    $ROCKER_IMAGE_TAG
+    "$@"
 )
 
 set -x
-exec docker run \
-    "${DOCKER_RUN_ARGS[@]}" \
-    $IMAGE "$@"
+exec "${DOCKER_RUN_ARGS[@]}"
 
