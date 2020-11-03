@@ -9,9 +9,14 @@ usage() {
         RC=1
     fi
     cat >&2 <<-EOF
-	Usage: $0 [-t TAG] IMAGE
-	    -t TAG:   Tag final image with TAG
-	    IMAGE:    Docker image tag to build on
+	Build ROS Docker overlay image
+	Usage: $0 [args...]
+	    -b ROCKER_BASE_IMAGE:  Base image to start from
+	    -t ROCKER_IMAGE_TAG:   Final image tag
+	    -w:                    Install package deps from workspace sources
+	                           (ROCKER_WORKSPACE_DEPS=true)
+	    If a '.rocker' file exists in the workspace, it will be sourced
+	      and any \$ROCKER_* will be read
 	EOF
     exit $RC
 }
@@ -57,7 +62,7 @@ if test -f $(pwd)/.rocker; then
     source $(pwd)/.rocker
 fi
 
-# Command-line args override thos settings
+# Command-line args override those settings
 while getopts :t:b:wh ARG; do
     case $ARG in
 	# Build args
@@ -75,7 +80,9 @@ shift $(($OPTIND - 1))
 # Check options and set defaults
 test -n "$ROCKER_BASE_IMAGE" || usage "No base image specified"
 ROCKER_IMAGE_TAG=${ROCKER_IMAGE_TAG:-${ROCKER_BASE_IMAGE}_overlay}
-ROCKER_WORKSPACE_DEPS=${ROCKER_WORKSPACE_DEPS:-false}
+if test "$ROCKER_WORKSPACE_DEPS" != true; then
+    ROCKER_WORKSPACE_DEPS=false
+fi
 
 # Construct `docker build` args
 BUILD_ARGS=(
