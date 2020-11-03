@@ -8,48 +8,48 @@ usage() {
         echo "Error:  $*" >&2
         RC=1
     fi
-    cat >&2 <<EOF
-Usage: $0 [-t TAG] IMAGE
-      -t TAG:   Tag final image with TAG
-      IMAGE:    Docker image tag to build on
-EOF
+    cat >&2 <<-EOF
+	Usage: $0 [-t TAG] IMAGE
+	    -t TAG:   Tag final image with TAG
+	    IMAGE:    Docker image tag to build on
+	EOF
     exit $RC
 }
 
 dockerfile_base() {
-    cat <<EOF
-ARG ROCKER_BASE_IMAGE
-FROM \${ROCKER_BASE_IMAGE}
+    cat <<-EOF
+	ARG ROCKER_BASE_IMAGE
+	FROM \${ROCKER_BASE_IMAGE}
 
-RUN apt-get update \
-    && apt-get install -y python-pip \
-    && apt-get clean \
-    && pip install catkin-tools
+	RUN apt-get update \
+	    && apt-get install -y python-pip \
+	    && apt-get clean \
+	    && pip install catkin-tools
 
-RUN echo "%sudo ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers.d/50-nopass \
-    && chmod 600 /etc/sudoers.d/50-nopass
+	RUN echo "%sudo ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers.d/50-nopass \
+	    && chmod 600 /etc/sudoers.d/50-nopass
 
-RUN apt-get update \
-    && apt-get install -y \
-        ccache \
-	clang \
-	clang-tidy \
-	clang-tools \
-	gdb \
-	xterm \
-	wget \
-    && apt-get clean
+	RUN apt-get update \
+	    && apt-get install -y \
+	        ccache \
+	        clang \
+	        clang-tidy \
+	        clang-tools \
+	        gdb \
+	        xterm \
+	        wget \
+	    && apt-get clean
 
-EOF
+	EOF
 }
 
 dockerfile_workspace() {
-    cat <<EOF
-    COPY . /tmp/ros_ws
-    RUN cd /tmp/ros_ws \
-	&& rosdep install -y --rosdistro \$ROS_DISTRO --ignore-src --from-paths src
+    cat <<-EOF
+	COPY . /tmp/ros_ws
+	RUN cd /tmp/ros_ws \
+	    && rosdep install -y --rosdistro \$ROS_DISTRO --ignore-src --from-paths src
 
-EOF
+	EOF
 }
 
 # Read from any .rocker config

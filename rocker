@@ -11,13 +11,13 @@ usage() {
         echo "Error:  $*" >&2
         RC=1
     fi
-    cat >&2 <<EOF
-Usage: $0 [-n NAME] [-i IMAGE] [COMMAND [ARGS...]]
-      -n NAME:  Set container name and hostname to NAME (default: rocker)
-      -i IMAGE: Docker image tag to run
-      COMMAND:  Command to run (default:  /bin/bash)
-      ARGS:     Command arguments
-EOF
+    cat >&2 <<-EOF
+	Usage: $0 [-n NAME] [-i IMAGE] [COMMAND [ARGS...]]
+	    -n NAME:  Set container name and hostname to NAME (default: rocker)
+	    -i IMAGE: Docker image tag to run
+	    COMMAND:  Command to run (default:  /bin/bash)
+	    ARGS:     Command arguments
+	EOF
     exit $RC
 }
 
@@ -82,4 +82,3 @@ DOCKER_RUN_ARGS=(
 
 set -x
 exec "${DOCKER_RUN_ARGS[@]}"
-
