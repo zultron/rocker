@@ -1,5 +1,10 @@
 #!/bin/bash -xe
 
+# Update rosdep cache, once only
+if test ! -d ~/.ros/rosdep/sources.cache; then
+    rosdep update
+fi
+
 catkin config \
     --extend /opt/ros/$ROS_DISTRO \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug
