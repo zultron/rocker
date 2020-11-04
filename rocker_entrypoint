@@ -6,8 +6,12 @@ sh -c 'echo "127.0.2.1  `hostname`" >> /etc/hosts'
 # Add user and group to system
 sed -i /etc/passwd -e "/^${HUSER}:/ d" # Clean stale entries
 echo "${HUSER}:x:${HUID}:${HGID}::${HHOME}:/bin/bash" >>/etc/passwd
+sed -i /etc/shadow -e "/^${HUSER}:/ d" # Clean stale entries
+echo "${HUSER}:*:18463:0:99999:7:::" >>/etc/shadow
 sed -i /etc/group -e "/^${HUSER}:/ d" # Clean stale entries
 echo "${HUSER}:x:${HGID}:" >>/etc/group
+sed -i /etc/gshadow -e "/^${HUSER}:/ d" # Clean stale entries
+echo "${HUSER}:*::" >>/etc/gshadow
 GRPS=(sudo dialout plugdev video ethercat)
 for GRP in "${GRPS[@]}"; do
     sed -i "/^${GRP}:/ s/:[^:]*\$/:${HUSER}/" /etc/group
