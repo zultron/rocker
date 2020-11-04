@@ -53,7 +53,9 @@ dockerfile_workspace() {
 	RUN rosdep update
 	COPY . /tmp/ros_ws
 	RUN cd /tmp/ros_ws \
-	    && rosdep install -y --rosdistro \$ROS_DISTRO --ignore-src --from-paths src
+	    && rosdep install -y --rosdistro \$ROS_DISTRO \
+	           --ignore-src --from-paths src \
+	           ${ROCKER_SKIP_KEYS[*]/#/--skip-keys=}
 
 	EOF
 }
