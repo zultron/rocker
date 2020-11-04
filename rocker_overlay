@@ -50,6 +50,7 @@ dockerfile_base() {
 
 dockerfile_workspace() {
     cat <<-EOF
+	RUN rosdep update
 	COPY . /tmp/ros_ws
 	RUN cd /tmp/ros_ws \
 	    && rosdep install -y --rosdistro \$ROS_DISTRO --ignore-src --from-paths src
