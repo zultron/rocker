@@ -27,9 +27,9 @@ dockerfile_base() {
 	FROM \${ROCKER_BASE_IMAGE}
 
 	RUN apt-get update \
-	    && apt-get install -y python-pip \
+	    && apt-get install -y python3-pip \
 	    && apt-get clean \
-	    && pip install catkin-tools
+	    && pip3 install catkin-tools
 
 	RUN echo "%sudo ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers.d/50-nopass \
 	    && chmod 600 /etc/sudoers.d/50-nopass
