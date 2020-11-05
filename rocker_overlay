@@ -15,49 +15,55 @@ usage() {
 	    -t ROCKER_IMAGE_TAG:   Final image tag
 	    -w:                    Install package deps from workspace sources
 	                           (ROCKER_WORKSPACE_DEPS=true)
+	    -p:                    Print the Dockerfile (don't build)
 	    If a '.rocker' file exists in the workspace, it will be sourced
 	      and any \$ROCKER_* will be read
 	EOF
     exit $RC
 }
 
-dockerfile_base() {
+dockerfile() {
+    local EXTRA_PKGS="$(echo -e "${ROCKER_EXTRA_PACKAGES[*]/#/\\\\\\n        }")"
+    local SKIP_KEYS="$(echo -e "${ROCKER_SKIP_KEYS[*]/#/\\\\\\n        --skip-keys=}")"
     cat <<-EOF
 	ARG ROCKER_BASE_IMAGE
 	FROM \${ROCKER_BASE_IMAGE}
 
-	RUN apt-get update \
-	    && apt-get install -y python3-pip \
-	    && apt-get clean \
+	RUN apt-get update \\
+	    && apt-get install -y python3-pip \\
+	    && apt-get clean \\
 	    && pip3 install catkin-tools
 
-	RUN echo "%sudo ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers.d/50-nopass \
+	RUN echo "%sudo ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers.d/50-nopass \\
 	    && chmod 600 /etc/sudoers.d/50-nopass
 
-	RUN apt-get update \
-	    && apt-get install -y \
-	        ccache \
-	        clang \
-	        clang-tidy \
-	        clang-tools \
-	        gdb \
-	        xterm \
+	RUN apt-get update \\
+	    && apt-get upgrade -y
+
+	RUN apt-get update \\
+	    && apt-get install -y \\
+	        ccache \\
+	        clang \\
+	        clang-tidy \\
+	        clang-tools \\
+	        gdb \\
+	        xterm \\
 	        wget \
+	        $(echo -n "$EXTRA_PKGS") \\
 	    && apt-get clean
 
 	EOF
-}
 
-dockerfile_workspace() {
-    cat <<-EOF
-	RUN rosdep update
+    if $ROCKER_WORKSPACE_DEPS; then
+        cat <<-EOF
 	COPY . /tmp/ros_ws
-	RUN cd /tmp/ros_ws \
-	    && rosdep install -y --rosdistro \$ROS_DISTRO \
-	           --ignore-src --from-paths src \
-	           ${ROCKER_SKIP_KEYS[*]/#/--skip-keys=}
+	RUN rosdep update \\
+	    && cd /tmp/ros_ws \\
+	    && rosdep install -y --rosdistro \$ROS_DISTRO \\
+	        --ignore-src --from-paths src $(echo -n "$SKIP_KEYS")
 
 	EOF
+    fi
 }
 
 # Read from any .rocker config
@@ -66,12 +72,14 @@ if test -f $(pwd)/.rocker; then
 fi
 
 # Command-line args override those settings
-while getopts :t:b:wh ARG; do
+PRINT_DOCKERFILE=false
+while getopts :t:b:wph ARG; do
     case $ARG in
 	# Build args
 	t) ROCKER_IMAGE_TAG=$OPTARG ;;
 	b) ROCKER_BASE_IMAGE=$OPTARG ;;
 	w) ROCKER_WORKSPACE_DEPS=true ;;
+        p) PRINT_DOCKERFILE=true ;;
 	# Usage
 	h) usage ;;
 	:) usage "Option -$OPTARG requires an argument" ;;
@@ -101,13 +109,14 @@ else
     BUILD_ARGS+=( - )
 fi
 
+# Print Dockerfile and exit if -p specified
+if $PRINT_DOCKERFILE; then
+    dockerfile
+    exit 0
+fi
+
 # Run `docker build`, feeding the Dockerfile over stdin
-{
-    dockerfile_base
-    if $ROCKER_WORKSPACE_DEPS; then
-	dockerfile_workspace
-    fi
-} | {
+dockerfile | {
     set -x
     exec docker build "${BUILD_ARGS[@]}"
 }
