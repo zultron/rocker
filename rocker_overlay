@@ -49,6 +49,7 @@ dockerfile() {
 	        gdb \\
 	        xterm \\
 	        python3-vcstool \\
+	        openssh-client \\
 	        wget \
 	        $(echo -n "$EXTRA_PKGS") \\
 	    && apt-get clean
@@ -58,11 +59,22 @@ dockerfile() {
     if $ROCKER_WORKSPACE_DEPS; then
         cat <<-EOF
 	COPY . /tmp/ros_ws
-	RUN rosdep update \\
-	    && cd /tmp/ros_ws \\
+	WORKDIR /tmp/ros_ws
+	RUN catkin clean --deinit -y >/dev/null 2>&1 \\
+	    ; rosdep update \\
+	    && if test -f .rocker_repos.yaml; then \\
+	        vcs import --skip-existing --input .rocker_repos.yaml src \\
+	        || true \\
+	    ; fi \\
 	    && rosdep install -y --rosdistro \$ROS_DISTRO \\
-	        --ignore-src --from-paths src $(echo -n "$SKIP_KEYS")
-
+	        --ignore-src --from-paths src $(echo -n "$SKIP_KEYS") \\
+	    && if test -f .rocker_repos.yaml; then \\
+	        catkin config \\
+	            --extend /opt/ros/\$ROS_DISTRO \\
+	            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \\
+	            -DCMAKE_BUILD_TYPE=Release \\
+	        && catkin build \\
+	    ; fi
 	EOF
     fi
 }
