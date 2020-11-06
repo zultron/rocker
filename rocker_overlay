@@ -48,6 +48,7 @@ dockerfile() {
 	        clang-tools \\
 	        gdb \\
 	        xterm \\
+	        python3-vcstool \\
 	        wget \
 	        $(echo -n "$EXTRA_PKGS") \\
 	    && apt-get clean
