@@ -30,9 +30,9 @@ dockerfile() {
 	FROM \${ROCKER_BASE_IMAGE}
 
 	RUN apt-get update \\
-	    && apt-get install -y python3-pip \\
+	    && apt-get install -y ${ROCKER_PYTHON}-pip \\
 	    && apt-get clean \\
-	    && pip3 install catkin-tools
+	    && ${ROCKER_PIP} install catkin-tools
 
 	RUN echo "%sudo ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers.d/50-nopass \\
 	    && chmod 600 /etc/sudoers.d/50-nopass
@@ -48,7 +48,7 @@ dockerfile() {
 	        clang-tools \\
 	        gdb \\
 	        xterm \\
-	        python3-vcstool \\
+	        ${ROCKER_PYTHON}-vcstool \\
 	        openssh-client \\
 	        wget \
 	        $(echo -n "$EXTRA_PKGS") \\
@@ -107,6 +107,8 @@ ROCKER_IMAGE_TAG=${ROCKER_IMAGE_TAG:-${ROCKER_BASE_IMAGE}_overlay}
 if test "$ROCKER_WORKSPACE_DEPS" != true; then
     ROCKER_WORKSPACE_DEPS=false
 fi
+ROCKER_PYTHON=${ROCKER_PYTHON:-python3}
+ROCKER_PIP=${ROCKER_PIP:-pip3}
 
 # Construct `docker build` args
 BUILD_ARGS=(
