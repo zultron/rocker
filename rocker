@@ -1,9 +1,5 @@
 #!/bin/bash -e
 
-# Host UID/GID
-HUID=$(id -u)
-HGID=$(id -g)
-
 usage() {
     if test -z "$*"; then
         RC=0
@@ -12,20 +8,30 @@ usage() {
         RC=1
     fi
     cat >&2 <<-EOF
-	Usage: $0 [-n NAME] [-i IMAGE] [COMMAND [ARGS...]]
-	    -n NAME:  Set container name and hostname to NAME (default: rocker)
-	    -i IMAGE: Docker image tag to run
-	    COMMAND:  Command to run (default:  /bin/bash)
-	    ARGS:     Command arguments
+	Usage: $0 [ run args ... | build args ... ]
+	  Run args: [-n NAME] [-i IMAGE] [COMMAND [ARGS...]]
+	    -n ROCKER_NAME:      Set container name and hostname (default: rocker)
+	    -t ROCKER_IMAGE_TAG: Docker image tag to run
+            -d:                  Run container detached (ROCKER_RUN_DETACHED=true)
+	    COMMAND:             Command to run (default:  /bin/bash)
+	    ARGS:                Command arguments
+	  Build args: -b [-t ROCKER_IMAGE_TAG] [-w] [-p] ROCKER_BASE_IMAGE
+	    -b:                  Base image to build on
+	    -t ROCKER_IMAGE_TAG: Final image tag (ROCKER_IMAGE_TAG)
+	    -w:                  Install package deps from workspace sources
+	                         (ROCKER_WORKSPACE_DEPS=true)
+	    -p:                  Print the Dockerfile (don't build)
+	  A '.rocker' file in the workspace may set default \$ROCKER_* values
 	EOF
     exit $RC
 }
 
 # Custom entrypoint
-ENTRYPOINT=$(dirname $0)/rocker_entrypoint
+ENTRYPOINT="$(readlink -f $0)"
 
 # Defaults
 ROCKER_NAME=${ROCKER_NAME:-rocker}
+ROCKER_MODE=${ROCKER_MODE:-run}
 
 # Read from any .rocker config
 if test -f $(pwd)/.rocker; then
@@ -33,11 +39,16 @@ if test -f $(pwd)/.rocker; then
 fi
 
 # Command line overrides .rocker config
-while getopts :n:i: ARG; do
+while getopts :t:n:bwp ARG; do
     case $ARG in
-	# Run options
+        # Common args
+	t) ROCKER_IMAGE_TAG=$OPTARG ;;
+	# Run args
 	n) ROCKER_NAME=$OPTARG ;;
-	i) ROCKER_IMAGE_TAG=$OPTARG ;;
+	# Build args
+	b) ROCKER_MODE=build ;;
+	w) ROCKER_WORKSPACE_DEPS=true ;;
+        p) PRINT_DOCKERFILE=true ;;
 	# Usage
 	h) usage ;;
 	:) usage "Option -$OPTARG requires an argument" ;;
@@ -46,39 +57,232 @@ while getopts :n:i: ARG; do
 done
 shift $(($OPTIND - 1))
 
-# Check arguments
-test -n "$ROCKER_IMAGE_TAG" || usage "No image tag specified"
+dockerfile() {
+    local EXTRA_PKGS="$(echo -e "${ROCKER_EXTRA_PACKAGES[*]/#/\\\\\\n        }")"
+    local SKIP_KEYS="$(echo -e "${ROCKER_SKIP_KEYS[*]/#/\\\\\\n        --skip-keys=}")"
+    cat <<-EOF
+	ARG ROCKER_BASE_IMAGE
+	FROM \${ROCKER_BASE_IMAGE}
 
-# Construct `docker run` args
-DOCKER_RUN_ARGS=(
-    docker run
-    -it --rm
-    # container & host names
-    --name $ROCKER_NAME
-    -h $ROCKER_NAME
-    # user config
-    -e HUID=$HUID
-    -e HGID=$HGID
-    -e HHOME=$HOME
-    -e HUSER=$USER
-    -e XDG_RUNTIME_DIR
-    -v $XDG_RUNTIME_DIR:$XDG_RUNTIME_DIR
-    -v $HOME:$HOME
-    # display
-    -e TERM
-    -e DISPLAY
-    -v /tmp/.X11-unix:/tmp/.X11-unix
-    -v /dev/dri:/dev/dri
-    # audio
-    -v /run/user/$HUID/pulse:/run/user/$HUID/pulse
-    # container start-up config
-    -w $PWD
-    -v $ENTRYPOINT:/usr/bin/entrypoint
-    --entrypoint /usr/bin/entrypoint
-    --init
-    $ROCKER_IMAGE_TAG
-    "$@"
-)
+	RUN apt-get update \\
+	    && apt-get install -y \\
+	        ${ROCKER_PYTHON}-pip \\
+	        sudo \\
+	    && apt-get clean \\
+	    && ${ROCKER_PIP} install catkin-tools
 
-set -x
-exec "${DOCKER_RUN_ARGS[@]}"
+	RUN echo "%sudo ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers.d/50-nopass \\
+	    && chmod 600 /etc/sudoers.d/50-nopass
+
+	RUN apt-get update \\
+	    && apt-get upgrade -y
+
+	EOF
+
+    if test "${ROCKER_INSTALL_ROS:-true}" = true; then
+        cat <<-EOF
+	RUN apt-get update \\
+	    && apt-get install -y \\
+	        ccache \\
+	        clang \\
+	        clang-tidy \\
+	        clang-tools \\
+	        gdb \\
+	        xterm \\
+	        ${ROCKER_PYTHON}-vcstool \\
+	        openssh-client \\
+	        wget \
+	        $(echo -n "$EXTRA_PKGS") \\
+	    && apt-get clean
+
+	EOF
+
+        if $ROCKER_WORKSPACE_DEPS; then
+            cat <<-EOF
+		COPY . /tmp/ros_ws
+		WORKDIR /tmp/ros_ws
+		RUN catkin clean --deinit -y >/dev/null 2>&1 \\
+		    ; rosdep update \\
+		    && if test -f .rocker_repos.yaml; then \\
+		        vcs import --skip-existing --input .rocker_repos.yaml src \\
+		        || true \\
+		    ; fi \\
+		    && rosdep install -y --rosdistro \$ROS_DISTRO \\
+		        --ignore-src --from-paths src $(echo -n "$SKIP_KEYS") \\
+		    && if test -f .rocker_repos.yaml; then \\
+		        catkin config \\
+		            --extend /opt/ros/\$ROS_DISTRO \\
+		            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \\
+		            -DCMAKE_BUILD_TYPE=Release \\
+		        && catkin build \\
+		    ; fi
+		EOF
+        fi
+    fi
+
+    if test -f .rockerfile; then
+        cat .rockerfile
+    fi
+}
+
+build() {
+    # Check options and set defaults
+    test -n "$ROCKER_BASE_IMAGE" || usage "No base image specified"
+    ROCKER_IMAGE_TAG=${ROCKER_IMAGE_TAG:-${ROCKER_BASE_IMAGE}_overlay}
+    if test "$ROCKER_WORKSPACE_DEPS" != true; then
+        ROCKER_WORKSPACE_DEPS=false
+    fi
+    ROCKER_PYTHON=${ROCKER_PYTHON:-python3}
+    ROCKER_PIP=${ROCKER_PIP:-pip3}
+
+    # Construct `docker build` args
+    BUILD_ARGS=(
+        --build-arg ROCKER_BASE_IMAGE=$ROCKER_BASE_IMAGE
+        --tag $ROCKER_IMAGE_TAG
+    )
+    if $ROCKER_WORKSPACE_DEPS || ${ROCKER_LOAD_CONTEXT:-false}; then
+        BUILD_ARGS+=(
+	    -f -
+	    $(pwd)
+        )
+    else
+        BUILD_ARGS+=( - )
+    fi
+
+    # Print Dockerfile and exit if -p specified
+    if ${PRINT_DOCKERFILE:-false}; then
+        dockerfile
+        exit 0
+    fi
+
+    # Run `docker build`, feeding the Dockerfile over stdin
+    dockerfile | {
+        set -x
+        exec docker build "${BUILD_ARGS[@]}"
+    }
+}
+
+run() {
+    # Check arguments
+    test -n "$ROCKER_IMAGE_TAG" || usage "No image tag specified"
+
+    # Host UID/GID
+    HUID=$(id -u)
+    HGID=$(id -g)
+
+    # Construct `docker run` args
+    # - base args
+    DOCKER_RUN_ARGS=(
+        -it --rm
+    )
+    test "$ROCKER_RUN_DETACHED" != true || DOCKER_RUN_ARGS+=( -d )
+    test "$ROCKER_PRIVILEGED" != true || DOCKER_RUN_ARGS+=( --privileged )
+
+    # - container & host names
+    DOCKER_RUN_ARGS+=(
+        --name $ROCKER_NAME
+        -h $ROCKER_NAME
+    )
+
+    # - user config
+    DOCKER_RUN_ARGS+=(
+        -e HUID=$HUID
+        -e HGID=$HGID
+        -e HHOME=$HOME
+        -e HUSER=$USER
+        -e XDG_RUNTIME_DIR
+        -v $XDG_RUNTIME_DIR:$XDG_RUNTIME_DIR
+        -v $HOME:$HOME
+    )
+
+    # - display, graphics, audio
+    DOCKER_RUN_ARGS+=(
+        -e TERM
+        -e DISPLAY
+        -v /tmp/.X11-unix:/tmp/.X11-unix
+        -v /dev/dri:/dev/dri
+        -v /run/user/$HUID/pulse:/run/user/$HUID/pulse
+    )
+
+    # - container start-up config
+    DOCKER_RUN_ARGS+=(
+        -w $PWD
+        -v $ENTRYPOINT:/usr/bin/entrypoint
+        -e ROCKER_MODE=entrypoint
+        --entrypoint /usr/bin/entrypoint
+    )
+    if test -z "$ROCKER_INIT"; then
+        DOCKER_RUN_ARGS+=( --init )
+    else
+        DOCKER_RUN_ARGS+=( -e ROCKER_INIT=${ROCKER_INIT} )
+    fi
+
+    # - user args
+    DOCKER_RUN_ARGS+=(
+        "${ROCKER_RUN_ARGS[@]}"
+    )
+
+    # Now run the container
+    set -x
+    exec docker run "${DOCKER_RUN_ARGS[@]}" $ROCKER_IMAGE_TAG "$@"
+}
+
+entrypoint() {
+
+    # Add hostname to hosts
+    sh -c 'echo "127.0.2.1  `hostname`" >> /etc/hosts'
+
+    # Install `sudo` for a one-off image with no overlay
+    if ! which >&/dev/null sudo; then
+        echo "rocker:  Installing 'sudo'; consider an overlay" >&2
+        apt-get update -qq
+        apt-get install -qq -y sudo
+        echo "%sudo ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/50-nopass
+        chmod 600 /etc/sudoers.d/50-nopass
+    fi
+
+    # Add user and group to system
+    sed -i /etc/passwd -e "/^${HUSER}:/ d" # Clean stale entries
+    echo "${HUSER}:x:${HUID}:${HGID}::${HHOME}:/bin/bash" >>/etc/passwd
+    sed -i /etc/shadow -e "/^${HUSER}:/ d" # Clean stale entries
+    echo "${HUSER}:*:18463:0:99999:7:::" >>/etc/shadow
+    sed -i /etc/group -e "/^${HUSER}:/ d" # Clean stale entries
+    echo "${HUSER}:x:${HGID}:" >>/etc/group
+    sed -i /etc/gshadow -e "/^${HUSER}:/ d" # Clean stale entries
+    echo "${HUSER}:*::" >>/etc/gshadow
+    GRPS=(sudo dialout plugdev video ethercat)
+    for GRP in "${GRPS[@]}"; do
+        sed -i "/^${GRP}:/ s/:[^:]*\$/:${HUSER}/" /etc/group
+    done
+
+    # Silence 'sudo: setrlimit(RLIMIT_CORE): Operation not permitted'
+    echo Set disable_coredump false > /etc/sudo.conf
+
+    # Set environment
+    export HOME=$HHOME
+    export USER=$HUSER
+
+    # Clean up
+    unset HUID HGID HHOME HUSER
+
+    # Ronconsole config
+    if test -f .rosconsole.config; then
+        export ROSCONSOLE_CONFIG_FILE=$(pwd)/.rosconsole.config
+    fi
+    export ROSCONSOLE_FORMAT='[${severity}] [${time}] [${node}] [${logger}]: ${message}'
+
+    if test -n "$ROCKER_INIT"; then
+        exec $ROCKER_INIT
+    else
+        # Run command as user
+        default_cmd=(/bin/bash --login -i)
+        exec sudo -u ${USER} -E "${@:-${default_cmd[@]}}"
+    fi
+
+}
+
+case $ROCKER_MODE in
+    run) run ;;
+    build) build ;;
+    entrypoint) entrypoint ;;
+esac
