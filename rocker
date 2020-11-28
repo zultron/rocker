@@ -12,15 +12,15 @@ usage() {
 	  Run args: [-n NAME] [-i IMAGE] [COMMAND [ARGS...]]
 	    -n ROCKER_NAME:      Set container name and hostname (default: rocker)
 	    -t ROCKER_IMAGE_TAG: Docker image tag to run
-            -d:                  Run container detached (ROCKER_RUN_DETACHED=true)
+	    -d:                  Run container detached (ROCKER_RUN_DETACHED=true)
 	    COMMAND:             Command to run (default:  /bin/bash)
 	    ARGS:                Command arguments
 	  Build args: -b [-t ROCKER_IMAGE_TAG] [-w] [-p] ROCKER_BASE_IMAGE
-	    -b:                  Base image to build on
 	    -t ROCKER_IMAGE_TAG: Final image tag (ROCKER_IMAGE_TAG)
 	    -w:                  Install package deps from workspace sources
 	                         (ROCKER_WORKSPACE_DEPS=true)
 	    -p:                  Print the Dockerfile (don't build)
+	    ROCKER_BASE_IMAGE:   Base image to build on
 	  A '.rocker' file in the workspace may set default \$ROCKER_* values
 	EOF
     exit $RC
@@ -39,12 +39,13 @@ if test -f $(pwd)/.rocker; then
 fi
 
 # Command line overrides .rocker config
-while getopts :t:n:bwp ARG; do
+while getopts :t:n:dbwp ARG; do
     case $ARG in
         # Common args
 	t) ROCKER_IMAGE_TAG=$OPTARG ;;
 	# Run args
 	n) ROCKER_NAME=$OPTARG ;;
+        d) ROCKER_RUN_DETACHED=true ;;
 	# Build args
 	b) ROCKER_MODE=build ;;
 	w) ROCKER_WORKSPACE_DEPS=true ;;
@@ -64,6 +65,10 @@ dockerfile() {
 	ARG ROCKER_BASE_IMAGE
 	FROM \${ROCKER_BASE_IMAGE}
 
+	EOF
+
+    if test "${ROCKER_INSTALL_ROS:-false}" = true; then
+        cat <<-EOF
 	RUN apt-get update \\
 	    && apt-get install -y \\
 	        ${ROCKER_PYTHON}-pip \\
@@ -71,6 +76,10 @@ dockerfile() {
 	    && apt-get clean \\
 	    && ${ROCKER_PIP} install catkin-tools
 
+	EOF
+    fi
+
+    cat <<-EOF
 	RUN echo "%sudo ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers.d/50-nopass \\
 	    && chmod 600 /etc/sudoers.d/50-nopass
 
@@ -79,7 +88,17 @@ dockerfile() {
 
 	EOF
 
-    if test "${ROCKER_INSTALL_ROS:-true}" = true; then
+    if test -n "${EXTRA_PKGS}"; then
+        cat <<-EOF
+	RUN apt-get update \\
+	    && apt-get install -y \\
+	        $(echo -n "$EXTRA_PKGS") \\
+	    && apt-get clean
+
+	EOF
+    fi
+
+    if test "${ROCKER_INSTALL_ROS:-false}" = true; then
         cat <<-EOF
 	RUN apt-get update \\
 	    && apt-get install -y \\
@@ -92,7 +111,6 @@ dockerfile() {
 	        ${ROCKER_PYTHON}-vcstool \\
 	        openssh-client \\
 	        wget \
-	        $(echo -n "$EXTRA_PKGS") \\
 	    && apt-get clean
 
 	EOF
