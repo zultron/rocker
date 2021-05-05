@@ -98,6 +98,16 @@ dockerfile() {
     cat <<-EOF
 	ARG ROCKER_BASE_IMAGE
 	FROM \${ROCKER_BASE_IMAGE}
+        USER root
+
+	EOF
+
+        cat <<-EOF
+	RUN apt-get update \\
+	    && apt-get install -y \\
+	        sudo \\
+	    && echo "%sudo ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers.d/50-nopass \\
+	    && chmod 600 /etc/sudoers.d/50-nopass
 
 	EOF
 
@@ -106,7 +116,6 @@ dockerfile() {
 	RUN apt-get update \\
 	    && apt-get install -y \\
 	        ${ROCKER_PYTHON}-pip \\
-	        sudo \\
 	    && apt-get clean \\
 	    && ${ROCKER_PIP} install catkin-tools
 
@@ -114,9 +123,6 @@ dockerfile() {
     fi
 
     cat <<-EOF
-	RUN echo "%sudo ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers.d/50-nopass \\
-	    && chmod 600 /etc/sudoers.d/50-nopass
-
 	RUN apt-get update \\
 	    && apt-get upgrade -y
 
@@ -238,6 +244,7 @@ run() {
 
     # - user config
     DOCKER_RUN_ARGS+=(
+        -u 0:0
         -e HUID=$HUID
         -e HGID=$HGID
         -e HHOME=$HOME
@@ -253,7 +260,7 @@ run() {
         -e DISPLAY
         -v /tmp/.X11-unix:/tmp/.X11-unix
         -v /dev/dri:/dev/dri
-        -v /run/user/$HUID/pulse:/run/user/$HUID/pulse
+        -v /run/user/$HUID:/run/user/$HUID
     )
 
     # - container start-up config
@@ -302,7 +309,7 @@ entrypoint() {
     echo "${HUSER}:x:${HGID}:" >>/etc/group
     sed -i /etc/gshadow -e "/^${HUSER}:/ d" # Clean stale entries
     echo "${HUSER}:*::" >>/etc/gshadow
-    GRPS=(sudo dialout plugdev video ethercat)
+    GRPS=(sudo dialout plugdev video ethercat cdrom)
     for GRP in "${GRPS[@]}"; do
         sed -i "/^${GRP}:/ s/:[^:]*\$/:${HUSER}/" /etc/group
     done
