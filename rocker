@@ -123,11 +123,13 @@ dockerfile() {
 	EOF
     fi
 
-    cat <<-EOF
+    if test "${ROCKER_UPGRADE_BASE_OS:-true}" = true; then
+        cat <<-EOF
 	RUN apt-get update \\
 	    && apt-get upgrade -y
 
 	EOF
+    fi
 
     if test -n "${EXTRA_PKGS}"; then
         cat <<-EOF
