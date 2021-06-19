@@ -116,7 +116,10 @@ dockerfile() {
 	         -o Dpkg::Options::="--force-confdef" \\
 	         -o Dpkg::Options::="--force-confold"
 	EOF
+    else
+        echo "# ROCKER_UPGRADE_BASE_OS=false; not upgrading base OS"
     fi
+    echo
 
     if test -n "${EXTRA_PKGS}"; then
         cat <<-EOF
@@ -124,9 +127,11 @@ dockerfile() {
 	    && apt-get install -y \\
 	        $(echo -n "$EXTRA_PKGS") \\
 	    && apt-get clean
-
 	EOF
+    else
+        echo "# ROCKER_EXTRA_PACKAGES empty; not installing extra packages"
     fi
+    echo
 
     if test "${ROCKER_INSTALL_DEV_TOOLS:-false}" = true; then
         cat <<-EOF
@@ -139,20 +144,28 @@ dockerfile() {
 	        gdb \\
 	        wget \
 	    && apt-get clean
-
 	EOF
+    else
+        echo "# ROCKER_INSTALL_DEV_TOOLS=false; not installing dev tools"
     fi
+    echo
 
     if test -n "$ROCKER_DOCKERFILE_SNIPPET"; then
         echo "$ROCKER_DOCKERFILE_SNIPPET"
+    else
+        echo "# no ROCKER_DOCKERFILE_SNIPPET specified"
     fi
+    echo
 
     ROCKER_DOCKERFILE=${ROCKER_DOCKERFILE:-.rockerfile}
     if test -f ${ROCKER_DOCKERFILE}; then
         # Don't print initial junk emacs mode line
         sed ${ROCKER_DOCKERFILE} -n \
             -e '1 {/^#.*-\*-dockerfile-\*-/! p}; 2,$ p'
+    else
+        echo "# no ROCKER_DOCKERFILE found"
     fi
+    echo
 }
 
 build() {
@@ -179,6 +192,9 @@ build() {
     # Print Dockerfile and exit if -p specified
     if ${PRINT_DOCKERFILE:-false}; then
         dockerfile
+        echo
+        echo "# Would build with:"
+        echo "# docker build ${BUILD_ARGS[@]}"
         exit 0
     fi
 
