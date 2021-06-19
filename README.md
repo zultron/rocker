@@ -5,7 +5,6 @@ The `rocker` script helps with common container use cases:
 - Add persistent modifications to an existing Ubuntu or Debian image
   - Install additional packages
   - Install configuration files
-  - Install dependencies of a ROS workspace
 - Run a container with your user ID and home directory bind-mounted
   - Read and write home directory files from containerized software
   - Avoid user ID mismatch issues between container and host
@@ -13,9 +12,6 @@ The `rocker` script helps with common container use cases:
 - Simple interface to complex `docker build`/`docker run` commands
   - Defaults cover many use cases
   - A config file allows extra settings to accommodate other use cases
-
-This script is flexible for use in many situations, even while it has
-been tailored for use with ROS workspaces.
 
 ## `.rocker` configuration file
 
@@ -41,13 +37,5 @@ Container image build args:
   install
 - `ROCKER_LOAD_CONTEXT`:  If `true`, load the current directory into
   the Docker build context (default: `false`)
-- ROS workspace configuration:
-  - `ROCKER_INSTALL_ROS`:  If `true`, install basic ROS utilities
-    (default `false`)
-  - `ROCKER_PYTHON`:  Python executable name (default `python3`)
-  - `ROCKER_PIP`:  Python executable name (default `pip3`)
-  - `ROCKER_WORKSPACE_DEPS`:  Install ROS package dependencies from
-    workspace
-  - `ROCKER_SKIP_KEYS`:  Don't install these `rosdep` keys
 - `.rockerfile`:  If a `.rockerfile` exists next to the `.rocker`
   file, it will be appended to the generated `Dockerfile`
