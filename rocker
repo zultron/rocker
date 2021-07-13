@@ -95,6 +95,7 @@ dockerfile() {
     cat <<-EOF
 	ARG ROCKER_BASE_IMAGE
 	FROM \${ROCKER_BASE_IMAGE}
+	SHELL ["/bin/bash", "-xc"]
         USER root
 
 	EOF
