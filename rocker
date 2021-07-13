@@ -47,17 +47,17 @@ usage() {
     fi
     cat >&2 <<-EOF
 	Usage: $0 [ run args ... | build args ... ]
-	  Run args: [-n NAME] [-i IMAGE] [COMMAND [ARGS...]]
-	    -n ROCKER_NAME:      Set container name and hostname (default: rocker)
-	    -t ROCKER_IMAGE_TAG: Docker image tag to run
-	    -d:                  Run container detached (ROCKER_RUN_DETACHED=true)
-	    COMMAND:             Command to run (default:  /bin/bash)
-	    ARGS:                Command arguments
-	  Build args: -b [-t ROCKER_IMAGE_TAG] [-w] [-p] ROCKER_BASE_IMAGE
-	    -t ROCKER_IMAGE_TAG: Final image tag (ROCKER_IMAGE_TAG)
-	    -p:                  Print the Dockerfile (don't build)
-	    ROCKER_BASE_IMAGE:   Base image to build on
-	  A '.rocker' file may set default \$ROCKER_* values
+	  Run args: [-n NAME] [-t ROCKER_IMAGE_TAG] [COMMAND [ARGS...]]
+	    -n ROCKER_NAME:       Set container name and hostname (default: rocker)
+	    -t ROCKER_IMAGE_TAG:  Docker image tag to run
+	    -d:                   Run container detached (ROCKER_RUN_DETACHED=true)
+	    COMMAND:              Command to run (default:  /bin/bash)
+	    ARGS:                 Command arguments
+	  Build args: -b [-p] [-i ROCKER_BASE_IMAGE] [-t ROCKER_IMAGE_TAG]
+	    -t ROCKER_IMAGE_TAG:  Final image tag (ROCKER_IMAGE_TAG)
+	    -p:                   Print the Dockerfile (don't build)
+	    -i ROCKER_BASE_IMAGE: Base image to build on
+	  A '.rocker' file in \$CWD may set default \$ROCKER_* values
 	EOF
     exit $RC
 }
@@ -75,7 +75,7 @@ if test -f $(pwd)/.rocker; then
 fi
 
 # Command line overrides .rocker config
-while getopts :t:n:dbp ARG; do
+while getopts :t:n:dbpi: ARG; do
     case $ARG in
         # Common args
 	t) ROCKER_IMAGE_TAG=$OPTARG ;;
@@ -85,6 +85,7 @@ while getopts :t:n:dbp ARG; do
 	# Build args
 	b) ROCKER_MODE=build ;;
         p) PRINT_DOCKERFILE=true ;;
+        i) ROCKER_BASE_IMAGE=$OPTARG ;;
 	# Usage
 	h) usage ;;
 	:) usage "Option -$OPTARG requires an argument" ;;
@@ -316,12 +317,6 @@ entrypoint() {
 
     # Clean up
     unset HUID HGID HHOME HUSER
-
-    # Ronconsole config
-    if test -f .rosconsole.config; then
-        export ROSCONSOLE_CONFIG_FILE=$(pwd)/.rosconsole.config
-    fi
-    export ROSCONSOLE_FORMAT='[${severity}] [${time}] [${node}] [${logger}]: ${message}'
 
     if test -n "$ROCKER_INIT"; then
         exec $ROCKER_INIT
