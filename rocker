@@ -261,7 +261,8 @@ run() {
         -w ${ROCKER_WORKDIR:-${PWD}}
         -v $ENTRYPOINT:/usr/bin/entrypoint
         -e ROCKER_MODE=entrypoint
-        -e ROCKER_TRACING_ON
+        -e ROCKER_TRACING_ON=$ROCKER_TRACING_ON
+        -e ROCKER_GROUPS=$ROCKER_GROUPS
         --entrypoint /usr/bin/entrypoint
     )
     if test -z "$ROCKER_INIT"; then
@@ -302,8 +303,7 @@ entrypoint() {
     echo "${HUSER}:x:${HGID}:" >>/etc/group
     sed -i /etc/gshadow -e "/^${HUSER}:/ d" # Clean stale entries
     echo "${HUSER}:*::" >>/etc/gshadow
-    GRPS=(sudo dialout plugdev video ethercat cdrom)
-    for GRP in "${GRPS[@]}"; do
+    for GRP in sudo dialout plugdev video cdrom ${ROCKER_GROUPS}; do
         getent group ${GRP} >/dev/null || continue
         adduser ${HUSER} ${GRP} >&/dev/null
     done
