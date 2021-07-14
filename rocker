@@ -34,6 +34,10 @@
 # rocker:  Simplify build and run of custom Docker containers
 #
 
+# Debugging
+test "${ROCKER_TRACING_ON:-false}" = true || ROCKER_TRACING_ON=false
+! $ROCKER_TRACING_ON || set -x
+
 usage() {
     if test -z "$*"; then
         RC=0
@@ -256,6 +260,7 @@ run() {
         -w ${ROCKER_WORKDIR:-${PWD}}
         -v $ENTRYPOINT:/usr/bin/entrypoint
         -e ROCKER_MODE=entrypoint
+        -e ROCKER_TRACING_ON
         --entrypoint /usr/bin/entrypoint
     )
     if test -z "$ROCKER_INIT"; then
