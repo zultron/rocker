@@ -34,6 +34,9 @@ ROCKER_NAME=df
 # Load this directory into the Docker build context
 ROCKER_LOAD_CONTEXT=true
 
+# Run this command as entrypoint script
+ROCKER_ENTRYPOINT_COMMAND=minetest
+
 _snippet() {
     cat <<-EOF
 	COPY . /tmp/build

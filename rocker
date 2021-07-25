@@ -34,10 +34,6 @@
 # rocker:  Simplify build and run of custom Docker containers
 #
 
-# Debugging
-test "${ROCKER_TRACING_ON:-false}" = true || ROCKER_TRACING_ON=false
-! $ROCKER_TRACING_ON || set -x
-
 usage() {
     if test -z "$*"; then
         RC=0
@@ -47,12 +43,13 @@ usage() {
     fi
     cat >&2 <<-EOF
 	Usage: $0 [ run args ... | build args ... ]
-	  Run args: [-p] [-n NAME] [-t ROCKER_IMAGE_TAG] [COMMAND [ARGS...]]
+	  Run args: [-p] [-n NAME] [-t ROCKER_IMAGE_TAG] [[COMMAND|--] [ARGS...]]
 	    -p:                   Print the \`docker run\` command (don't run)
 	    -n ROCKER_NAME:       Set container name and hostname (default: rocker)
 	    -t ROCKER_IMAGE_TAG:  Docker image tag to run
 	    -d:                   Run container detached (ROCKER_RUN_DETACHED=true)
 	    COMMAND:              Command to run (default:  /bin/bash)
+	    --:                   End of args (w/ROCKER_ENTRYPOINT_COMMAND)
 	    ARGS:                 Command arguments
 	  Build args: -b [-p] [-i ROCKER_BASE_IMAGE] [-t ROCKER_IMAGE_TAG]
 	    -t ROCKER_IMAGE_TAG:  Final image tag (ROCKER_IMAGE_TAG)
@@ -63,37 +60,39 @@ usage() {
     exit $RC
 }
 
-# Custom entrypoint
-ENTRYPOINT="$(readlink -f $0)"
+readopts() {
+    # Custom entrypoint
+    ENTRYPOINT="$(readlink -f $0)"
 
-# Defaults
-ROCKER_NAME=${ROCKER_NAME:-rocker}
-ROCKER_MODE=${ROCKER_MODE:-run}
+    # Defaults
+    ROCKER_NAME=${ROCKER_NAME:-rocker}
+    ROCKER_MODE=${ROCKER_MODE:-run}
 
-# Read from any .rocker config
-if test -f $(pwd)/.rocker; then
-    source $(pwd)/.rocker
-fi
+    # Read from any .rocker config
+    if test -f $(pwd)/.rocker; then
+        source $(pwd)/.rocker
+    fi
 
-# Command line overrides .rocker config
-while getopts :t:n:dbpi: ARG; do
-    case $ARG in
-        # Common args
-	t) ROCKER_IMAGE_TAG=$OPTARG ;;
-	# Run args
-	n) ROCKER_NAME=$OPTARG ;;
-        d) ROCKER_RUN_DETACHED=true ;;
-	# Build args
-	b) ROCKER_MODE=build ;;
-        p) PRINT_DRYRUN=true ;;
-        i) ROCKER_BASE_IMAGE=$OPTARG ;;
-	# Usage
-	h) usage ;;
-	:) usage "Option -$OPTARG requires an argument" ;;
-	*) usage "Illegal option -$OPTARG" ;;
-    esac
-done
-shift $(($OPTIND - 1))
+    # Command line overrides .rocker config
+    while getopts :t:n:dbpi: ARG; do
+        case $ARG in
+            # Common args
+            t) ROCKER_IMAGE_TAG=$OPTARG ;;
+            # Run args
+            n) ROCKER_NAME=$OPTARG ;;
+            d) ROCKER_RUN_DETACHED=true ;;
+            # Build args
+            b) ROCKER_MODE=build ;;
+            p) PRINT_DRYRUN=true ;;
+            i) ROCKER_BASE_IMAGE=$OPTARG ;;
+            # Usage
+            h) usage ;;
+            :) usage "Option -$OPTARG requires an argument" ;;
+            *) usage "Illegal option -$OPTARG" ;;
+        esac
+    done
+    shift $(($OPTIND - 1))
+}
 
 dockerfile() {
     local EXTRA_PKGS="$(echo -e "${ROCKER_EXTRA_PACKAGES[*]/#/\\\\\\n        }")"
@@ -261,7 +260,6 @@ run() {
         -u 0:0
         -w ${ROCKER_WORKDIR:-${PWD}}
         -v $ENTRYPOINT:/usr/bin/entrypoint
-        -e ROCKER_MODE=entrypoint
         -e ROCKER_TRACING_ON=$ROCKER_TRACING_ON
         -e ROCKER_GROUPS=$ROCKER_GROUPS
         --entrypoint /usr/bin/entrypoint
@@ -333,14 +331,27 @@ entrypoint() {
         exec $ROCKER_INIT
     else
         # Run command as user
-        default_cmd=(/bin/bash --login -i)
-        exec sudo -u ${USER} -E "${@:-${default_cmd[@]}}"
+        if test -z "$ROCKER_ENTRYPOINT_COMMAND"; then
+            default_cmd=(/bin/bash --login -i)
+            exec sudo -u ${USER} -E "${@:-${default_cmd[@]}}"
+        else
+            exec sudo -u ${USER} -E $ROCKER_ENTRYPOINT_COMMAND "${@}"
+        fi
     fi
 
 }
 
+# Debugging
+test "${ROCKER_TRACING_ON:-false}" = true || ROCKER_TRACING_ON=false
+! $ROCKER_TRACING_ON || set -x
+
+# Am I running as an entrypoint?
+if test $(basename $0) = 'entrypoint'; then
+    # Do not pass go, do not parse args, go directly to container
+    entrypoint "$@"
+fi
+
 case $ROCKER_MODE in
     run) run "$@";;
     build) build "$@" ;;
-    entrypoint) entrypoint "$@";;
 esac

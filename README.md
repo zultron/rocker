@@ -95,13 +95,18 @@ These environment variables or `.rocker` variables configure the
 
 ## Running containers
 
-    rocker [-p] [-n ROCKER_NAME] [-t ROCKER_IMAGE_TAG] [COMMAND [ARGS...]]
+    rocker [-p] [-n ROCKER_NAME] [-t ROCKER_IMAGE_TAG] [[COMMAND|--] [ARGS...]]
 
 `rocker` will will start a container.  With itself as the entrypoint
 inside the container, it will configure your user and groups the same
 as on the host, configure `$USER` and `$HOME` environment variables,
 and `exec` the `COMMAND` with optional `ARGS...` (`bash` login shell
 by default).
+
+When using the `ROCKER_ENTRYPOINT_COMMAND` option, the
+entrypoint script will `exec` that instead of `COMMAND` with
+`ARGS....`; in that case, `--` signals to stop processing `rocker`
+args.
 
 With the `-p` argument, `rocker` will print the `docker run` command
 it would have executed, but will not actually start a container.
@@ -125,6 +130,8 @@ These environment variables or `.rocker` variables configure the
 - `ROCKER_GROUPS`:  List of extra groups to add user to
 - `ROCKER_RUN_ARGS`:  List of extra `docker run` args to add to
   command line (May be used as array variable in `.rocker`)
+- `ROCKER_ENTRYPOINT_COMMAND`:  The `rocker` entrypoint script will
+  exec this instead of `COMMAND`; see above, and usage with `--`
 
 ## License
 
