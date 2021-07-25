@@ -47,7 +47,8 @@ usage() {
     fi
     cat >&2 <<-EOF
 	Usage: $0 [ run args ... | build args ... ]
-	  Run args: [-n NAME] [-t ROCKER_IMAGE_TAG] [COMMAND [ARGS...]]
+	  Run args: [-p] [-n NAME] [-t ROCKER_IMAGE_TAG] [COMMAND [ARGS...]]
+	    -p:                   Print the \`docker run\` command (don't run)
 	    -n ROCKER_NAME:       Set container name and hostname (default: rocker)
 	    -t ROCKER_IMAGE_TAG:  Docker image tag to run
 	    -d:                   Run container detached (ROCKER_RUN_DETACHED=true)
@@ -84,7 +85,7 @@ while getopts :t:n:dbpi: ARG; do
         d) ROCKER_RUN_DETACHED=true ;;
 	# Build args
 	b) ROCKER_MODE=build ;;
-        p) PRINT_DOCKERFILE=true ;;
+        p) PRINT_DRYRUN=true ;;
         i) ROCKER_BASE_IMAGE=$OPTARG ;;
 	# Usage
 	h) usage ;;
@@ -196,7 +197,7 @@ build() {
     fi
 
     # Print Dockerfile and exit if -p specified
-    if ${PRINT_DOCKERFILE:-false}; then
+    if ${PRINT_DRYRUN:-false}; then
         dockerfile
         echo
         echo "# Would build with:"
@@ -276,9 +277,19 @@ run() {
         "${ROCKER_RUN_ARGS[@]}"
     )
 
+    # - image tag and command line args
+    DOCKER_RUN_ARGS+=(
+        $ROCKER_IMAGE_TAG
+        "$@"
+    )
+
     # Now run the container
-    set -x
-    exec docker run "${DOCKER_RUN_ARGS[@]}" $ROCKER_IMAGE_TAG "$@"
+    if test ${PRINT_DRYRUN:-false} = true; then
+        echo docker run "${DOCKER_RUN_ARGS[@]}"
+    else
+        set -x
+        exec docker run "${DOCKER_RUN_ARGS[@]}"
+    fi
 }
 
 entrypoint() {

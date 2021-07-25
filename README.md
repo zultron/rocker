@@ -95,13 +95,16 @@ These environment variables or `.rocker` variables configure the
 
 ## Running containers
 
-    rocker [-n ROCKER_NAME] [-t ROCKER_IMAGE_TAG] [COMMAND [ARGS...]]
+    rocker [-p] [-n ROCKER_NAME] [-t ROCKER_IMAGE_TAG] [COMMAND [ARGS...]]
 
 `rocker` will will start a container.  With itself as the entrypoint
 inside the container, it will configure your user and groups the same
 as on the host, configure `$USER` and `$HOME` environment variables,
 and `exec` the `COMMAND` with optional `ARGS...` (`bash` login shell
 by default).
+
+With the `-p` argument, `rocker` will print the `docker run` command
+it would have executed, but will not actually start a container.
 
 Even if the image was not built with `rocker -b`, `rocker -t
 arbitrary:image` will start a container as usual, additionally
