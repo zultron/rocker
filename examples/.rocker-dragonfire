@@ -11,10 +11,14 @@
 # ~/bin/rocker -b
 #
 # Run container:
-# ~/bin/rocker -t df
+# ~/bin/rocker -t dfc
+#
+# Rockerize it and run:
+# ln -s rocker ~/bin/dfc
+# dfc
 
 # Docker image to build/run
-ROCKER_IMAGE_TAG=df
+ROCKER_IMAGE_TAG=dfc
 
 # Docker base image for overlay
 ROCKER_BASE_IMAGE=debian:stretch
@@ -29,7 +33,7 @@ ROCKER_EXTRA_PACKAGES=(
 )
 
 # Docker container name+hostname
-ROCKER_NAME=df
+ROCKER_NAME=dfc
 
 # Load this directory into the Docker build context
 ROCKER_LOAD_CONTEXT=true

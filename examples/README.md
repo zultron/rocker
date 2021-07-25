@@ -13,7 +13,8 @@ try out the `dragonfire` example:
 ## Example descriptions
 
 - `.rocker-dragonfire`:  [Dragonfireclient][dfc] is a Minetest cheat
-  client for use with anarchy servers
+  client for use with anarchy servers; rockerize with e.g. `ln -s
+  rocker ~/bin/dfc` and run with `dfc`
 
 
 [dfc]: https://github.com/EliasFleckenstein03/dragonfireclient

@@ -136,14 +136,14 @@ The `ROCKER_ENTRYPOINT_COMMAND` option adds the `COMMAND` run as the
 user out the entrypoint script with `ARGS....` (e.g. `myapp --arg1
 --arg2=foo`).
 
-A symlink `myapp` pointing to `rocker` tells `rocker` to look for a
-`rocker` image with label `ROCKER_NAME=myapp`.  If it finds that
-image, it will examine image labels and extract configs found in the
-original `.rocker` file, and start the container.
+A symlink `myapp` pointing to `rocker` (with rocker in `~/bin/rocker`,
+`ln -s rocker ~/bin/myapp`) tells `rocker` to look for a `rocker`
+image with label `ROCKER_NAME=myapp`.  If it finds that image, it will
+examine image labels and extract configs found in the original
+`.rocker` file, and start the container.
 
 The usual `rocker` run args are ignored, and any command line args are
 passed into the entrypoint command.
-
 
 ## License
 
