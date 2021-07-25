@@ -329,7 +329,7 @@ entrypoint() {
 }
 
 case $ROCKER_MODE in
-    run) run ;;
+    run) run "$@";;
     build) build "$@" ;;
-    entrypoint) entrypoint ;;
+    entrypoint) entrypoint "$@";;
 esac
