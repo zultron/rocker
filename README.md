@@ -95,18 +95,13 @@ These environment variables or `.rocker` variables configure the
 
 ## Running containers
 
-    rocker [-p] [-n ROCKER_NAME] [-t ROCKER_IMAGE_TAG] [[COMMAND|--] [ARGS...]]
+    rocker [-p] [-n ROCKER_NAME] [-t ROCKER_IMAGE_TAG] [COMMAND [ARGS...]]
 
 `rocker` will will start a container.  With itself as the entrypoint
 inside the container, it will configure your user and groups the same
 as on the host, configure `$USER` and `$HOME` environment variables,
 and `exec` the `COMMAND` with optional `ARGS...` (`bash` login shell
 by default).
-
-When using the `ROCKER_ENTRYPOINT_COMMAND` option, the
-entrypoint script will `exec` that instead of `COMMAND` with
-`ARGS....`; in that case, `--` signals to stop processing `rocker`
-args.
 
 With the `-p` argument, `rocker` will print the `docker run` command
 it would have executed, but will not actually start a container.
@@ -130,8 +125,25 @@ These environment variables or `.rocker` variables configure the
 - `ROCKER_GROUPS`:  List of extra groups to add user to
 - `ROCKER_RUN_ARGS`:  List of extra `docker run` args to add to
   command line (May be used as array variable in `.rocker`)
-- `ROCKER_ENTRYPOINT_COMMAND`:  The `rocker` entrypoint script will
-  exec this instead of `COMMAND`; see above, and usage with `--`
+
+## Running containers:  `rocker`ized apps
+
+An application may be `rocker`ized so that you can run e.g. `myapp
+--arg1 --arg2=foo` directly from the command line, as though you were
+running an application installed directly on the host.
+
+The `ROCKER_ENTRYPOINT_COMMAND` option adds the `COMMAND` run as the
+user out the entrypoint script with `ARGS....` (e.g. `myapp --arg1
+--arg2=foo`).
+
+A symlink `myapp` pointing to `rocker` tells `rocker` to look for a
+`rocker` image with label `ROCKER_NAME=myapp`.  If it finds that
+image, it will examine image labels and extract configs found in the
+original `.rocker` file, and start the container.
+
+The usual `rocker` run args are ignored, and any command line args are
+passed into the entrypoint command.
+
 
 ## License
 

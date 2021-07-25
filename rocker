@@ -61,15 +61,12 @@ usage() {
 }
 
 readopts() {
-    # Custom entrypoint
-    ENTRYPOINT="$(readlink -f $0)"
-
     # Defaults
     ROCKER_NAME=${ROCKER_NAME:-rocker}
     ROCKER_MODE=${ROCKER_MODE:-run}
 
     # Read from any .rocker config
-    if test -f $(pwd)/.rocker; then
+    if test -z "${NO_ROCKER}" -a -f $(pwd)/.rocker; then
         source $(pwd)/.rocker
     fi
 
@@ -92,6 +89,11 @@ readopts() {
         esac
     done
     shift $(($OPTIND - 1))
+
+    case $ROCKER_MODE in
+        run) run "$@";;
+        build) build "$@" ;;
+    esac
 }
 
 dockerfile() {
@@ -172,6 +174,29 @@ dockerfile() {
         echo "# no ROCKER_DOCKERFILE found"
     fi
     echo
+
+    if test -n "$ROCKER_NAME"; then
+        # Add `rocker` run data as labels
+        echo "# rocker run info"
+        echo "LABEL ROCKER_NAME=${ROCKER_NAME}"
+        test ${ROCKER_RUN_DETACHED:-false} != true || \
+            echo "LABEL ROCKER_RUN_DETACHED=true"
+        test ${ROCKER_PRIVILEGED:-false} != true || \
+            echo "LABEL ROCKER_PRIVILEGED=true"
+        test -z "${ROCKER_GROUPS}" || \
+            echo "LABEL ROCKER_GROUPS=\"${ROCKER_GROUPS}\""
+        test -z "${ROCKER_RUN_ARGS}" || \
+            echo "LABEL ROCKER_RUN_ARGS=\"${ROCKER_RUN_ARGS}\""
+        test -z "${ROCKER_ENTRYPOINT_COMMAND}" || \
+            echo "LABEL ROCKER_ENTRYPOINT_COMMAND=\"${ROCKER_ENTRYPOINT_COMMAND}\""
+        test -z "${ROCKER_USER_CONFIG}" || \
+            echo "LABEL ROCKER_USER_CONFIG=\"${ROCKER_USER_CONFIG}\""
+        test -z "${ROCKER_INIT}" || \
+            echo "LABEL ROCKER_INIT=\"${ROCKER_INIT}\""
+        test -z "${ROCKER_RUN_ARGS}" || \
+            echo "LABEL ROCKER_RUN_ARGS=\"${ROCKER_RUN_ARGS}\""
+
+    fi
 }
 
 build() {
@@ -211,9 +236,27 @@ build() {
     }
 }
 
+run_rocker_app() {
+    NAME=$(basename $0); shift
+    echo NAME=$NAME
+    echo ARGS=$*
+    IMAGE=$(docker image ls -q --filter=label=ROCKER_NAME=${NAME} | head -1)
+    test -n "$IMAGE" || usage "Unable to find rocker image $ROCKER_NAME"
+    SETTINGS="$(docker image inspect dfc --format='{{.Config.Labels}}' | \
+        sed -e 's/map\[//' -e 's/\]//' -e 's/ /\n/g' -e 's/:/=/g')"
+    for S in $SETTINGS; do
+        eval "${S%%=*}=\${${S%%=*}:-${S#*=}}"
+    done
+    ROCKER_IMAGE_TAG=$IMAGE
+    run "$@"
+}
+
 run() {
     # Check arguments
     test -n "$ROCKER_IMAGE_TAG" || usage "No image tag specified"
+
+    # Custom entrypoint
+    ENTRYPOINT="$(readlink -f $0)"
 
     # Host UID/GID
     HUID=$(id -u)
@@ -264,6 +307,11 @@ run() {
         -e ROCKER_GROUPS=$ROCKER_GROUPS
         --entrypoint /usr/bin/entrypoint
     )
+    if test -n "$ROCKER_ENTRYPOINT_COMMAND"; then
+        DOCKER_RUN_ARGS+=(
+            -e ROCKER_ENTRYPOINT_COMMAND="$ROCKER_ENTRYPOINT_COMMAND"
+        )
+    fi
     if test -z "$ROCKER_INIT"; then
         DOCKER_RUN_ARGS+=( --init )
     else
@@ -346,12 +394,11 @@ test "${ROCKER_TRACING_ON:-false}" = true || ROCKER_TRACING_ON=false
 ! $ROCKER_TRACING_ON || set -x
 
 # Am I running as an entrypoint?
-if test $(basename $0) = 'entrypoint'; then
-    # Do not pass go, do not parse args, go directly to container
-    entrypoint "$@"
-fi
-
-case $ROCKER_MODE in
-    run) run "$@";;
-    build) build "$@" ;;
+case $(basename $0) in
+    # Normal case; read CL args
+    rocker) readopts "$@" ;;
+    # Entrypoint mode
+    entrypoint) entrypoint "$@" ;;
+    # Symlink; look for container
+    *) run_rocker_app $0 "$@" ;;
 esac
