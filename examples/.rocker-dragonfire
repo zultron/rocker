@@ -1,0 +1,64 @@
+#                                                        -*- shell-script -*-
+# Rocker config for the Dragonfire Minetest client
+#
+# See https://github.com/zultron/rocker
+#
+# Install rocker:
+# curl -Lso ~/bin/rocker https://github.com/zultron/rocker/raw/master/rocker
+# chmod +x ~/bin/rocker
+#
+# Build container (in this directory):
+# ~/bin/rocker -b
+#
+# Run container:
+# ~/bin/rocker -t df
+
+# Docker image to build/run
+ROCKER_IMAGE_TAG=df
+
+# Docker base image for overlay
+ROCKER_BASE_IMAGE=debian:stretch
+
+ROCKER_EXTRA_PACKAGES=(
+    g++ make libc6-dev cmake libpng-dev libjpeg-dev
+    libxxf86vm-dev libgl1-mesa-dev libsqlite3-dev
+    libogg-dev libvorbis-dev libopenal-dev libcurl4-gnutls-dev
+    libfreetype6-dev zlib1g-dev libgmp-dev libjsoncpp-dev
+    libluajit-5.1-dev gettext
+    git
+)
+
+# Docker container name+hostname
+ROCKER_NAME=df
+
+# Load this directory into the Docker build context
+ROCKER_LOAD_CONTEXT=true
+
+_snippet() {
+    cat <<-EOF
+	COPY . /tmp/build
+	WORKDIR /tmp/build
+
+	# Build Irrlicht
+	ARG IRRLICHT_VER=1.9.0mt2
+	RUN git clone https://github.com/minetest/irrlicht \\
+	        -b \${IRRLICHT_VER} --depth=1 \\
+	    && cd irrlicht \\
+	    && cmake . \\
+	    && make -j\$(nproc) \\
+	    && make install
+	RUN ldconfig  # Put /usr/local/lib on the map
+
+	# Build Mitenest
+	ARG DFC_VER=2021.05
+	RUN git clone https://github.com/EliasFleckenstein03/dragonfireclient \\
+	        -b \${DFC_VER} --depth=1
+	RUN cd dragonfireclient \\
+	    && cmake . -DRUN_IN_PLACE=FALSE \\
+	        -DIRRLICHT_INCLUDE_DIR=/usr/local/include/irrlichtmt \\
+	        -DIRRLICHT_LIBRARY=/usr/local/lib/libIrrlichtMt.so \\
+	    && make -j\$(nproc) \\
+	    && make install
+	EOF
+}
+ROCKER_DOCKERFILE_SNIPPET="$(_snippet)"
