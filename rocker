@@ -100,6 +100,7 @@ dockerfile() {
     local EXTRA_PKGS="$(echo -e "${ROCKER_EXTRA_PACKAGES[*]/#/\\\\\\n        }")"
 
     cat <<-EOF
+	# syntax = docker/dockerfile:1.2
 	ARG ROCKER_BASE_IMAGE
 	FROM \${ROCKER_BASE_IMAGE}
 	SHELL ["/bin/bash", "-xc"]
@@ -208,6 +209,7 @@ build() {
     BUILD_ARGS=(
         --build-arg ROCKER_BASE_IMAGE=$ROCKER_BASE_IMAGE
         --tag $ROCKER_IMAGE_TAG
+        --progress=plain
         "${ROCKER_BUILD_ARGS[@]}"  # .rocker args
         "$@"  # Command-line args
     )
@@ -228,6 +230,9 @@ build() {
         echo "# docker build ${BUILD_ARGS[@]}"
         exit 0
     fi
+
+    # Enable buildkit
+    export DOCKER_BUILDKIT=1
 
     # Run `docker build`, feeding the Dockerfile over stdin
     dockerfile | {
