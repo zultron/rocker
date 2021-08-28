@@ -44,23 +44,24 @@ usage() {
     cat >&2 <<-EOF
 	Usage: $0 [ run args ... | build args ... ]
 	  Run args: [-p] [-n NAME] [-t ROCKER_IMAGE_TAG] [[COMMAND|--] [ARGS...]]
-	    -p:                   Print the \`docker run\` command (don't run)
-	    -n ROCKER_NAME:       Set container name and hostname (default: rocker)
-	    -t ROCKER_IMAGE_TAG:  Docker image tag to run
-	    -d:                   Run container detached (ROCKER_RUN_DETACHED=true)
-	    COMMAND:              Command to run (default:  /bin/bash)
-	    --:                   End of args (w/ROCKER_ENTRYPOINT_COMMAND)
-	    ARGS:                 Command arguments
+	    -p:                    Print the \`docker run\` command (don't run)
+	    -n ROCKER_NAME:        Set container name and hostname (default: rocker)
+	    -t ROCKER_IMAGE_TAG:   Docker image tag to run
+	    -d:                    Run container detached (ROCKER_RUN_DETACHED=true)
+	    COMMAND:               Command to run (default:  /bin/bash)
+	    --:                    End of args (w/ROCKER_ENTRYPOINT_COMMAND)
+	    ARGS:                  Command arguments
 	  Build args: -b [-p] [-i ROCKER_BASE_IMAGE] [-t ROCKER_IMAGE_TAG]
-	    -t ROCKER_IMAGE_TAG:  Final image tag (ROCKER_IMAGE_TAG)
-	    -p:                   Print the Dockerfile (don't build)
-	    -i ROCKER_BASE_IMAGE: Base image to build on
+	    -t ROCKER_IMAGE_TAG:   Final image tag (ROCKER_IMAGE_TAG)
+	    -T ROCKER_BUILD_STAGE: Add --target=ROCKER_BUILD_STAGE arg
+	    -p:                    Print the Dockerfile (don't build)
+	    -i ROCKER_BASE_IMAGE:  Base image to build on
 	  A '.rocker' file in \$CWD may set default \$ROCKER_* values
 	EOF
     exit $RC
 }
 
-readopts() {
+readopts_and_go() {
     # Defaults
     ROCKER_NAME=${ROCKER_NAME:-rocker}
     ROCKER_MODE=${ROCKER_MODE:-run}
@@ -71,7 +72,7 @@ readopts() {
     fi
 
     # Command line overrides .rocker config
-    while getopts :t:n:dbpi: ARG; do
+    while getopts :t:n:dbT:pi: ARG; do
         case $ARG in
             # Common args
             t) ROCKER_IMAGE_TAG=$OPTARG ;;
@@ -80,6 +81,7 @@ readopts() {
             d) ROCKER_RUN_DETACHED=true ;;
             # Build args
             b) ROCKER_MODE=build ;;
+            T) ROCKER_BUILD_STAGE=$OPTARG ;;
             p) PRINT_DRYRUN=true ;;
             i) ROCKER_BASE_IMAGE=$OPTARG ;;
             # Usage
@@ -89,6 +91,11 @@ readopts() {
         esac
     done
     shift $(($OPTIND - 1))
+
+    # Call any post-process function
+    if declare -F rocker_post > /dev/null; then
+        rocker_post
+    fi
 
     case $ROCKER_MODE in
         run) run "$@";;
@@ -102,7 +109,7 @@ dockerfile() {
     cat <<-EOF
 	# syntax = docker/dockerfile:1.2
 	ARG ROCKER_BASE_IMAGE
-	FROM \${ROCKER_BASE_IMAGE}
+	FROM \${ROCKER_BASE_IMAGE} AS base
 	SHELL ["/bin/bash", "-xc"]
         USER root
 
@@ -175,29 +182,6 @@ dockerfile() {
         echo "# no ROCKER_DOCKERFILE found"
     fi
     echo
-
-    if test -n "$ROCKER_NAME"; then
-        # Add `rocker` run data as labels
-        echo "# rocker run info"
-        echo "LABEL ROCKER_NAME=${ROCKER_NAME}"
-        test ${ROCKER_RUN_DETACHED:-false} != true || \
-            echo "LABEL ROCKER_RUN_DETACHED=true"
-        test ${ROCKER_PRIVILEGED:-false} != true || \
-            echo "LABEL ROCKER_PRIVILEGED=true"
-        test -z "${ROCKER_GROUPS}" || \
-            echo "LABEL ROCKER_GROUPS=\"${ROCKER_GROUPS}\""
-        test -z "${ROCKER_RUN_ARGS}" || \
-            echo "LABEL ROCKER_RUN_ARGS=\"${ROCKER_RUN_ARGS}\""
-        test -z "${ROCKER_ENTRYPOINT_COMMAND}" || \
-            echo "LABEL ROCKER_ENTRYPOINT_COMMAND=\"${ROCKER_ENTRYPOINT_COMMAND}\""
-        test -z "${ROCKER_USER_CONFIG}" || \
-            echo "LABEL ROCKER_USER_CONFIG=\"${ROCKER_USER_CONFIG}\""
-        test -z "${ROCKER_INIT}" || \
-            echo "LABEL ROCKER_INIT=\"${ROCKER_INIT}\""
-        test -z "${ROCKER_RUN_ARGS}" || \
-            echo "LABEL ROCKER_RUN_ARGS=\"${ROCKER_RUN_ARGS}\""
-
-    fi
 }
 
 build() {
@@ -213,6 +197,31 @@ build() {
         "${ROCKER_BUILD_ARGS[@]}"  # .rocker args
         "$@"  # Command-line args
     )
+    if test -n "$ROCKER_BUILD_STAGE"; then
+        BUILD_ARGS+=( --target=$ROCKER_BUILD_STAGE )
+    fi
+
+    if test -n "$ROCKER_NAME"; then
+        # Add `rocker` run data as labels
+        BUILD_ARGS+=( --label=ROCKER_NAME=${ROCKER_NAME} )
+        test ${ROCKER_RUN_DETACHED:-false} != true || \
+            BUILD_ARGS+=( --label=ROCKER_RUN_DETACHED=true )
+        test ${ROCKER_PRIVILEGED:-false} != true || \
+            BUILD_ARGS+=( --label=LABEL ROCKER_PRIVILEGED=true )
+        test -z "${ROCKER_GROUPS}" || \
+            BUILD_ARGS+=( --label=ROCKER_GROUPS="${ROCKER_GROUPS}" )
+        test -z "${ROCKER_RUN_ARGS}" || \
+            BUILD_ARGS+=( --label=ROCKER_RUN_ARGS="${ROCKER_RUN_ARGS}" )
+        test -z "${ROCKER_ENTRYPOINT_COMMAND}" || \
+            BUILD_ARGS+=( --label=ROCKER_ENTRYPOINT_COMMAND="${ROCKER_ENTRYPOINT_COMMAND}" )
+        test -z "${ROCKER_USER_CONFIG}" || \
+            BUILD_ARGS+=( --label=ROCKER_USER_CONFIG="${ROCKER_USER_CONFIG}" )
+        test -z "${ROCKER_INIT}" || \
+            BUILD_ARGS+=( --label=ROCKER_INIT="${ROCKER_INIT}" )
+        test -z "${ROCKER_RUN_ARGS}" || \
+            BUILD_ARGS+=( --label=ROCKER_RUN_ARGS="${ROCKER_RUN_ARGS}" )
+    fi
+
     if ${ROCKER_LOAD_CONTEXT:-false}; then
         BUILD_ARGS+=(
 	    -f -
@@ -245,12 +254,18 @@ run_rocker_app() {
     NAME=$(basename $0); shift
     echo NAME=$NAME
     echo ARGS=$*
-    IMAGE=$(docker image ls -q --filter=label=ROCKER_NAME=${NAME} | head -1)
+    IMAGE="$(docker image ls -q --filter=label=ROCKER_NAME=${NAME} \
+        --filter=dangling=false)"
     test -n "$IMAGE" || usage "Unable to find rocker image $ROCKER_NAME"
-    SETTINGS="$(docker image inspect dfc --format='{{.Config.Labels}}' | \
-        sed -e 's/map\[//' -e 's/\]//' -e 's/ /\n/g' -e 's/:/=/g')"
+    test $(echo "$IMAGE" | wc -l) -eq 1 || usage "Multiple images for ${NAME}"
+    # Set ROCKER_* variables from container labels
+    SETTINGS="$(docker image inspect $IMAGE --format='{{.Config.Labels}}' | \
+        sed -e 's/map\[//' -e 's/\]//' -e 's/ /\n/g')"
     for S in $SETTINGS; do
-        eval "${S%%=*}=\${${S%%=*}:-${S#*=}}"
+        case "$S" in
+            ROCKER_*) declare "${S/:/=}";;
+            *) : ;;
+        esac
     done
     ROCKER_IMAGE_TAG=$IMAGE
     run "$@"
@@ -400,8 +415,8 @@ test "${ROCKER_TRACING_ON:-false}" = true || ROCKER_TRACING_ON=false
 
 # Am I running as an entrypoint?
 case $(basename $0) in
-    # Normal case; read CL args
-    rocker) readopts "$@" ;;
+    # Normal case; read CL args and run or build
+    rocker) readopts_and_go "$@" ;;
     # Entrypoint mode
     entrypoint) entrypoint "$@" ;;
     # Symlink; look for container
