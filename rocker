@@ -263,7 +263,8 @@ run_rocker_app() {
         sed -e 's/map\[//' -e 's/\]//' -e 's/ /\n/g')"
     for S in $SETTINGS; do
         case "$S" in
-            ROCKER_*) declare "${S/:/=}";;
+            # Treat ROCKER_* labels as variables & set them if not clobbering
+            ROCKER_*) declare -p "${S/:*/}" >&/dev/null || declare "${S/:/=}";;
             *) : ;;
         esac
     done
