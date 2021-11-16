@@ -64,6 +64,30 @@ usage() {
 }
 
 readopts_and_go() {
+    # If script called as something besides `rocker`, look for an
+    # existing image and read its labels as config values; these are
+    # overridden by everything else
+    local NAME=$(basename $THIS)
+    local MULTIPLE_IMAGES=false
+    if test $NAME != rocker; then
+        local IMAGE="$(docker image ls -q --filter=label=ROCKER_NAME=${NAME} \
+            --filter=dangling=false)"
+        test $(echo "$IMAGE" | wc -l) -eq 1 || MULTIPLE_IMAGES=true
+        if test -n "$IMAGE" -a $MULTIPLE_IMAGES = false; then
+            # Set ROCKER_* variables from container labels
+            local ARGS="$(docker image inspect $IMAGE \
+                    --format='{{.Config.Labels}}' | \
+                sed -e 's/map\[//' -e 's/\]//' -e 's/ /\n/g')"
+            for A in $ARGS; do
+                case "$A" in
+                    ROCKER_*) declare -g "${A/:/=}";;
+                    *) : ;;
+                esac
+            done
+            ROCKER_IMAGE_TAG=$IMAGE
+        fi
+    fi
+
     # Read command line args
     declare -A ROCKER_CL_ARGS
     while getopts :t:n:dbT:pi:r: ARG; do
@@ -92,11 +116,6 @@ readopts_and_go() {
     cd $ROCKER_DIR
     if test -z "${NO_ROCKER}" -a -f ${PWD}/.rocker; then
         source ${PWD}/.rocker
-    fi
-
-    # Call any post-process function
-    if declare -F rocker_post > /dev/null; then
-        rocker_post
     fi
 
     # Command-line args override .rocker file
@@ -265,28 +284,6 @@ build() {
     }
 }
 
-run_rocker_app() {
-    NAME=$(basename $0); shift
-    echo NAME=$NAME
-    echo ARGS=$*
-    IMAGE="$(docker image ls -q --filter=label=ROCKER_NAME=${NAME} \
-        --filter=dangling=false)"
-    test -n "$IMAGE" || usage "Unable to find rocker image $ROCKER_NAME"
-    test $(echo "$IMAGE" | wc -l) -eq 1 || usage "Multiple images for ${NAME}"
-    # Set ROCKER_* variables from container labels
-    SETTINGS="$(docker image inspect $IMAGE --format='{{.Config.Labels}}' | \
-        sed -e 's/map\[//' -e 's/\]//' -e 's/ /\n/g')"
-    for S in $SETTINGS; do
-        case "$S" in
-            # Treat ROCKER_* labels as variables & set them if not clobbering
-            ROCKER_*) declare -p "${S/:*/}" >&/dev/null || declare "${S/:/=}";;
-            *) : ;;
-        esac
-    done
-    ROCKER_IMAGE_TAG=$IMAGE
-    run "$@"
-}
-
 run() {
     # Check arguments
     test -n "$ROCKER_IMAGE_TAG" || usage "No image tag specified"
@@ -435,10 +432,8 @@ test "${ROCKER_TRACING_ON:-false}" = true || ROCKER_TRACING_ON=false
 
 # Am I running as an entrypoint?
 case $(basename $0) in
-    # Normal case; read CL args and run or build
-    rocker) readopts_and_go "$@" ;;
     # Entrypoint mode
     entrypoint) entrypoint "$@" ;;
-    # Symlink; look for container
-    *) run_rocker_app $0 "$@" ;;
+    # Normal case; read CL args and run or build
+    *) readopts_and_go "$@" ;;
 esac
