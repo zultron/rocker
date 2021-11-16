@@ -56,34 +56,29 @@ usage() {
 	    -T ROCKER_BUILD_STAGE: Add --target=ROCKER_BUILD_STAGE arg
 	    -p:                    Print the Dockerfile (don't build)
 	    -i ROCKER_BASE_IMAGE:  Base image to build on
-	  A '.rocker' file in \$CWD may set default \$ROCKER_* values
+	  Common args:
+	    -r ROCKER_DIR:         Use this as base directory (default: \$CWD)
+	  A '.rocker' file in \$ROCKER_DIR may set default \$ROCKER_* values
 	EOF
     exit $RC
 }
 
 readopts_and_go() {
-    # Defaults
-    ROCKER_NAME=${ROCKER_NAME:-rocker}
-    ROCKER_MODE=${ROCKER_MODE:-run}
-
-    # Read from any .rocker config
-    if test -z "${NO_ROCKER}" -a -f $(pwd)/.rocker; then
-        source $(pwd)/.rocker
-    fi
-
-    # Command line overrides .rocker config
-    while getopts :t:n:dbT:pi: ARG; do
+    # Read command line args
+    declare -A ROCKER_CL_ARGS
+    while getopts :t:n:dbT:pi:r: ARG; do
         case $ARG in
             # Common args
-            t) ROCKER_IMAGE_TAG=$OPTARG ;;
+            t) ROCKER_CL_ARGS[ROCKER_IMAGE_TAG]=$OPTARG ;;
+            r) ROCKER_CL_ARGS[ROCKER_DIR]=$OPTARG ;;
             # Run args
-            n) ROCKER_NAME=$OPTARG ;;
-            d) ROCKER_RUN_DETACHED=true ;;
+            n) ROCKER_CL_ARGS[ROCKER_NAME]=$OPTARG ;;
+            d) ROCKER_CL_ARGS[ROCKER_RUN_DETACHED]=true ;;
             # Build args
-            b) ROCKER_MODE=build ;;
-            T) ROCKER_BUILD_STAGE=$OPTARG ;;
+            b) ROCKER_CL_ARGS[ROCKER_MODE]=build ;;
+            T) ROCKER_CL_ARGS[ROCKER_BUILD_STAGE]=$OPTARG ;;
             p) PRINT_DRYRUN=true ;;
-            i) ROCKER_BASE_IMAGE=$OPTARG ;;
+            i) ROCKER_CL_ARGS[ROCKER_BASE_IMAGE]=$OPTARG ;;
             # Usage
             h) usage ;;
             :) usage "Option -$OPTARG requires an argument" ;;
@@ -92,10 +87,26 @@ readopts_and_go() {
     done
     shift $(($OPTIND - 1))
 
+    # Read from any .rocker config
+    ROCKER_DIR=${ROCKER_DIR:-${ROCKER_CL_ARGS[ROCKER_DIR]:-${PWD}}}
+    cd $ROCKER_DIR
+    if test -z "${NO_ROCKER}" -a -f ${PWD}/.rocker; then
+        source ${PWD}/.rocker
+    fi
+
     # Call any post-process function
     if declare -F rocker_post > /dev/null; then
         rocker_post
     fi
+
+    # Command-line args override .rocker file
+    for ARG in "${!ROCKER_CL_ARGS[@]}"; do
+        declare ${ARG}="${ROCKER_CL_ARGS[${ARG}]}"
+    done
+
+    # Defaults
+    ROCKER_NAME=${ROCKER_NAME:-rocker}
+    ROCKER_MODE=${ROCKER_MODE:-run}
 
     case $ROCKER_MODE in
         run) run "$@";;
@@ -225,7 +236,7 @@ build() {
     if ${ROCKER_LOAD_CONTEXT:-false}; then
         BUILD_ARGS+=(
 	    -f -
-	    $(pwd)
+	    ${PWD}
         )
     else
         BUILD_ARGS+=( - )
@@ -277,7 +288,7 @@ run() {
     test -n "$ROCKER_IMAGE_TAG" || usage "No image tag specified"
 
     # Custom entrypoint
-    ENTRYPOINT="$(readlink -f $0)"
+    ENTRYPOINT="${THIS}"
 
     # Host UID/GID
     HUID=$(id -u)
@@ -322,7 +333,7 @@ run() {
     # - container start-up config
     DOCKER_RUN_ARGS+=(
         -u 0:0
-        -w ${ROCKER_WORKDIR:-${PWD}}
+        -w ${ROCKER_WORKDIR:-${HERE}}
         -v $ENTRYPOINT:/usr/bin/entrypoint
         -e ROCKER_TRACING_ON=$ROCKER_TRACING_ON
         -e ROCKER_GROUPS=$ROCKER_GROUPS
@@ -409,6 +420,10 @@ entrypoint() {
     fi
 
 }
+
+# Record cwd and script location before changing directory
+HERE="$(readlink -f $PWD)"
+THIS="$(readlink -f $0)"
 
 # Debugging
 test "${ROCKER_TRACING_ON:-false}" = true || ROCKER_TRACING_ON=false
