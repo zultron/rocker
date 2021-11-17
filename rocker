@@ -198,13 +198,6 @@ dockerfile() {
     fi
     echo
 
-    if test -n "$ROCKER_DOCKERFILE_SNIPPET"; then
-        echo "$ROCKER_DOCKERFILE_SNIPPET"
-    else
-        echo "# no ROCKER_DOCKERFILE_SNIPPET specified"
-    fi
-    echo
-
     ROCKER_DOCKERFILE=${ROCKER_DOCKERFILE:-.rockerfile}
     if test -f ${ROCKER_DOCKERFILE}; then
         # Don't print initial junk emacs mode line
@@ -212,6 +205,13 @@ dockerfile() {
             -e '1 {/^#.*-\*-dockerfile-\*-/! p}; 2,$ p'
     else
         echo "# no ROCKER_DOCKERFILE found"
+    fi
+    echo
+
+    if test -n "$ROCKER_DOCKERFILE_SNIPPET"; then
+        echo "$ROCKER_DOCKERFILE_SNIPPET"
+    else
+        echo "# no ROCKER_DOCKERFILE_SNIPPET specified"
     fi
     echo
 }
