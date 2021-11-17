@@ -239,15 +239,17 @@ build() {
         test ${ROCKER_RUN_DETACHED:-false} != true || \
             BUILD_ARGS+=( --label=ROCKER_RUN_DETACHED=true )
         test ${ROCKER_PRIVILEGED:-false} != true || \
-            BUILD_ARGS+=( --label=LABEL ROCKER_PRIVILEGED=true )
+            BUILD_ARGS+=( --label=ROCKER_PRIVILEGED=true )
         test -z "${ROCKER_GROUPS}" || \
             BUILD_ARGS+=( --label=ROCKER_GROUPS="${ROCKER_GROUPS}" )
-        test -z "${ROCKER_RUN_ARGS}" || \
-            BUILD_ARGS+=( --label=ROCKER_RUN_ARGS="${ROCKER_RUN_ARGS}" )
         test -z "${ROCKER_ENTRYPOINT_COMMAND}" || \
             BUILD_ARGS+=(
                 --label=ROCKER_ENTRYPOINT_COMMAND="${ROCKER_ENTRYPOINT_COMMAND}"
             )
+        test -z "${ROCKER_HOST_NETWORKING}" || \
+            BUILD_ARGS+=(
+		--label=ROCKER_HOST_NETWORKING="${ROCKER_HOST_NETWORKING}"
+	    )
         test -z "${ROCKER_USER_CONFIG}" || \
             BUILD_ARGS+=( --label=ROCKER_USER_CONFIG="${ROCKER_USER_CONFIG}" )
         test -z "${ROCKER_INIT}" || \
@@ -303,11 +305,21 @@ run() {
     test "$ROCKER_RUN_DETACHED" != true || DOCKER_RUN_ARGS+=( -d )
     test "$ROCKER_PRIVILEGED" != true || DOCKER_RUN_ARGS+=( --privileged )
 
-    # - container & host names
+    # - container name
     DOCKER_RUN_ARGS+=(
         --name $ROCKER_NAME
-        -h $ROCKER_NAME
     )
+    # - networking and host name
+    if test ${ROCKER_HOST_NETWORKING:-false} = true; then
+	DOCKER_RUN_ARGS+=(
+	    --network host
+	    --hostname $(hostname)
+	)
+    else
+	DOCKER_RUN_ARGS+=(
+	    --hostname $ROCKER_NAME
+	)
+    fi
 
     # - user config
     if test "${ROCKER_USER_CONFIG:-true}" = true; then
