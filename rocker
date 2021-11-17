@@ -362,13 +362,9 @@ run() {
         "$@"
     )
 
-    # Now run the container
-    if test ${PRINT_DRYRUN:-false} = true; then
-        echo docker run "${DOCKER_RUN_ARGS[@]}"
-    else
-        set -x
-        exec docker run "${DOCKER_RUN_ARGS[@]}"
-    fi
+    # Now run the container (or print what would have been done)
+    test ${PRINT_DRYRUN:-false} = true && ACTION=echo || ACTION=exec
+    $ACTION docker run "${DOCKER_RUN_ARGS[@]}"
 }
 
 entrypoint() {
