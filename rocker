@@ -70,7 +70,9 @@ readopts_and_go() {
     local NAME=$(basename $THIS)
     local MULTIPLE_IMAGES=false
     if test $NAME != rocker; then
-        local IMAGE="$(docker image ls -q --filter=label=ROCKER_NAME=${NAME} \
+        NAME=${NAME/./:}  # Turn name.tag into name:tag
+        local IMAGE="$(docker image ls -q \
+            --filter=label=ROCKER_IMAGE_TAG=${NAME} \
             --filter=dangling=false)"
         test $(echo "$IMAGE" | wc -l) -eq 1 || MULTIPLE_IMAGES=true
         if test -n "$IMAGE" -a $MULTIPLE_IMAGES = false; then
@@ -226,6 +228,7 @@ build() {
         --build-arg ROCKER_BASE_IMAGE=$ROCKER_BASE_IMAGE
         --tag $ROCKER_IMAGE_TAG
         --progress=plain
+        --label=ROCKER_IMAGE_TAG=${ROCKER_IMAGE_TAG}
         "${ROCKER_BUILD_ARGS[@]}"  # .rocker args
         "$@"  # Command-line args
     )

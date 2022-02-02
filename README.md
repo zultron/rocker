@@ -133,14 +133,15 @@ An application may be `rocker`ized so that you can run e.g. `myapp
 running an application installed directly on the host.
 
 The `ROCKER_ENTRYPOINT_COMMAND` option adds the `COMMAND` run as the
-user out the entrypoint script with `ARGS....` (e.g. `myapp --arg1
+user out of the entrypoint script with `ARGS....` (e.g. `myapp --arg1
 --arg2=foo`).
 
 A symlink `myapp` pointing to `rocker` (with rocker in `~/bin/rocker`,
 `ln -s rocker ~/bin/myapp`) tells `rocker` to look for a `rocker`
-image with label `ROCKER_NAME=myapp`.  If it finds that image, it will
-examine image labels and extract configs found in the original
-`.rocker` file, and start the container.
+image with label `ROCKER_IMAGE_TAG=myapp`.  If it finds that image, it
+will examine image labels and extract configs found in the original
+`.rocker` file, and start the container.  A symlink `myapp.tag` tells
+`rocker` to look for an image labeled `ROCKER_IMAGE_TAG=myapp:tag`.
 
 The usual `rocker` run args are ignored, and any command line args are
 passed into the entrypoint command.
