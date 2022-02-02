@@ -33,6 +33,7 @@
 #
 # rocker:  Simplify build and run of custom Docker containers
 #
+# https://github.com/zultron/rocker/
 
 usage() {
     if test -z "$*"; then
