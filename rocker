@@ -68,7 +68,7 @@ readopts_and_go() {
     # If script called as something besides `rocker`, look for an
     # existing image and read its labels as config values; these are
     # overridden by everything else
-    local NAME=$(basename $THIS)
+    local NAME=${CALLED_AS}
     local MULTIPLE_IMAGES=false
     if test $NAME != rocker; then
         NAME=${NAME/./:}  # Turn name.tag into name:tag
@@ -93,7 +93,7 @@ readopts_and_go() {
 
     # Read command line args
     declare -A ROCKER_CL_ARGS
-    while getopts :t:n:dbT:pi:r: ARG; do
+    while getopts :t:r:n:dbT:pi:h- ARG; do
         case $ARG in
             # Common args
             t) ROCKER_CL_ARGS[ROCKER_IMAGE_TAG]=$OPTARG ;;
@@ -106,8 +106,9 @@ readopts_and_go() {
             T) ROCKER_CL_ARGS[ROCKER_BUILD_STAGE]=$OPTARG ;;
             p) PRINT_DRYRUN=true ;;
             i) ROCKER_CL_ARGS[ROCKER_BASE_IMAGE]=$OPTARG ;;
-            # Usage
+            # Usage & end of args
             h) usage ;;
+            -) break ;;
             :) usage "Option -$OPTARG requires an argument" ;;
             *) usage "Illegal option -$OPTARG" ;;
         esac
@@ -436,7 +437,8 @@ entrypoint() {
 
 # Record cwd and script location before changing directory
 HERE="$(readlink -f $PWD)"
-THIS="$(readlink -f $0)"
+CALLED_AS="$(basename $BASH_SOURCE)"
+THIS="$(readlink -f $BASH_SOURCE)"
 
 # Debugging
 test "${ROCKER_TRACING_ON:-false}" = true || ROCKER_TRACING_ON=false
