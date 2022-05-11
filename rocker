@@ -346,6 +346,7 @@ run() {
         -v /tmp/.X11-unix:/tmp/.X11-unix
         -v /dev/dri:/dev/dri
         -v /run/user/$HUID:/run/user/$HUID
+        -v /dev/snd
     )
 
     # - container start-up config
