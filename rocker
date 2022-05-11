@@ -70,6 +70,7 @@ readopts_and_go() {
     # overridden by everything else
     local NAME=${CALLED_AS}
     local MULTIPLE_IMAGES=false
+    local DIR
     if test $NAME != rocker; then
         NAME=${NAME/./:}  # Turn name.tag into name:tag
         local IMAGE="$(docker image ls -q \
@@ -118,8 +119,13 @@ readopts_and_go() {
     # Read from any .rocker config
     ROCKER_DIR=${ROCKER_DIR:-${ROCKER_CL_ARGS[ROCKER_DIR]:-${PWD}}}
     cd $ROCKER_DIR
-    if test -z "${NO_ROCKER}" -a -f ${PWD}/.rocker; then
-        source ${PWD}/.rocker
+    if test -z "${NO_ROCKER}"; then
+        for DIR in ${PWD} $(dirname ${BASH_SOURCE[0]}); do
+            if test -f ${DIR}/.rocker; then
+                source ${DIR}/.rocker
+                break
+            fi
+        done
     fi
 
     # Command-line args override .rocker file
