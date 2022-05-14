@@ -352,7 +352,8 @@ run() {
         -v /tmp/.X11-unix:/tmp/.X11-unix
         -v /dev/dri:/dev/dri
         -v /run/user/$HUID:/run/user/$HUID
-        -v /dev/snd
+        --device /dev/snd
+        -e PULSE_SERVER=${XDG_RUNTIME_DIR}/pulse/native
     )
 
     # - container start-up config
@@ -413,7 +414,7 @@ entrypoint() {
     echo "${HUSER}:x:${HGID}:" >>/etc/group
     sed -i /etc/gshadow -e "/^${HUSER}:/ d" # Clean stale entries
     echo "${HUSER}:*::" >>/etc/gshadow
-    for GRP in sudo dialout plugdev video cdrom ${ROCKER_GROUPS}; do
+    for GRP in sudo dialout plugdev video cdrom audio ${ROCKER_GROUPS}; do
         getent group ${GRP} >/dev/null || continue
         adduser ${HUSER} ${GRP} >&/dev/null
     done
