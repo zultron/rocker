@@ -128,6 +128,11 @@ readopts_and_go() {
         done
     fi
 
+    # Call any post-process function
+    if declare -F rocker_post > /dev/null; then
+        rocker_post
+    fi
+
     # Command-line args override .rocker file
     for ARG in "${!ROCKER_CL_ARGS[@]}"; do
         declare ${ARG}="${ROCKER_CL_ARGS[${ARG}]}"
