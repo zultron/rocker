@@ -83,6 +83,8 @@ readopts_and_go() {
                     --format='{{.Config.Labels}}' | \
                 sed -e 's/map\[//' -e 's/\]//' -e 's/ /\n/g')"
             for A in $ARGS; do
+                local VAR="${A/:*/}"
+                test -z "${!VAR}" || continue  # Don't overwrite
                 case "$A" in
                     ROCKER_*) declare -g "${A/:/=}";;
                     *) : ;;
