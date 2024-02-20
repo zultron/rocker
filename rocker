@@ -386,7 +386,7 @@ run() {
 
     # - user args
     DOCKER_RUN_ARGS+=(
-        "${ROCKER_RUN_ARGS[@]}"
+        ${ROCKER_RUN_ARGS}
     )
 
     # - image tag and command line args
