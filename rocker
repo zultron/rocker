@@ -119,7 +119,8 @@ readopts_and_go() {
     shift $(($OPTIND - 1))
 
     # Read from any .rocker config
-    ROCKER_DIR=${ROCKER_DIR:-${ROCKER_CL_ARGS[ROCKER_DIR]:-${PWD}}}
+    ROCKER_DIR="${ROCKER_DIR:-${ROCKER_CL_ARGS[ROCKER_DIR]:-${PWD}}}"
+    ROCKER_DIR="$(readlink -f ${ROCKER_DIR})"  # Abs path for script use
     cd $ROCKER_DIR
     if test -z "${NO_ROCKER}"; then
         for DIR in ${PWD} $(dirname ${BASH_SOURCE[0]}); do
