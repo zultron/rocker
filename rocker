@@ -361,6 +361,8 @@ run() {
         -v /dev/dri:/dev/dri
         -v /run/user/$HUID:/run/user/$HUID
         --device /dev/snd
+        # -v ~/.config/pulse/cookie:/tmp/pulse-cookie
+        # -e PULSE_COOKIE=/tmp/pulse-cookie
         -e PULSE_SERVER=${XDG_RUNTIME_DIR}/pulse/native
     )
 
