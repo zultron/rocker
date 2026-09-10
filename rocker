@@ -457,11 +457,13 @@ entrypoint() {
         exec $ROCKER_INIT
     else
         # Run command as user
+        ENV_VARS=( XDG_RUNTIME_DIR TERM DISPLAY PULSE_SERVER )
+        ENV=( $(for i in "${ENV_VARS[@]}"; do echo "$i=${!i}"; done) )
         if test -z "$ROCKER_ENTRYPOINT_COMMAND"; then
             default_cmd=(/bin/bash --login -i)
-            exec sudo -u ${USER} -E "${@:-${default_cmd[@]}}"
+            exec sudo -u ${USER} "${ENV[@]}" "${@:-${default_cmd[@]}}"
         else
-            exec sudo -u ${USER} -E $ROCKER_ENTRYPOINT_COMMAND "${@}"
+            exec sudo -u ${USER} "${ENV[@]}" $ROCKER_ENTRYPOINT_COMMAND "${@}"
         fi
     fi
 
