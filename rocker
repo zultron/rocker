@@ -408,6 +408,29 @@ entrypoint() {
     # Add hostname to hosts
     sh -c 'echo "127.0.2.1  `hostname`" >> /etc/hosts'
 
+    # Add group to system
+    if id -ng $HGID >&/dev/null; then  # GID exists; update name
+        groupmod $(id -ng $HGID) -n $HUSER
+    elif id -g $HUSER >&/dev/null; then  # Group name exists; update GID
+        groupmod $HUSER -g $HGID
+    else  # No such group; create it
+        groupadd $HUSER -g $HGID
+    fi
+    # Add user to system
+    if id -u $HUSER >&/dev/null; then  # Username exists; update UID
+        usermod $HUSER -u $HUID -g $HGID -d $HHOME
+    elif getent passwd $HUID >&/dev/null; then  # UID exists; update name
+        OLDUSER=$(getent passwd $HUID | cut -d: -f1)
+        usermod -g $HGID $OLDUSER  # Scans through entire $HOME; do this first
+        usermod $OLDUSER -l $HUSER
+        usermod -d $HHOME $HUSER
+    else  # No such user; create it
+        useradd $HUSER -u $HUID -g $HGID -d $HHOME
+    fi
+    # Add supplementary groups
+    usermod ${HUSER} -aG dialout,plugdev,video,cdrom,audio
+    test -z "${ROCKER_GROUPS}" || usermod ${HUSER} -aG ${ROCKER_GROUPS// /,}
+
     # Install `sudo` for a one-off image with no overlay
     if ! which >&/dev/null sudo; then
         echo "rocker:  Installing 'sudo'; consider an overlay" >&2
@@ -415,21 +438,8 @@ entrypoint() {
         apt-get install -qq -y sudo
         echo "%sudo ALL=(ALL:ALL) NOPASSWD: ALL" > /etc/sudoers.d/50-nopass
         chmod 600 /etc/sudoers.d/50-nopass
+        usermod ${HUSER} -aG sudo
     fi
-
-    # Add user and group to system
-    sed -i /etc/passwd -e "/^${HUSER}:/ d" # Clean stale entries
-    echo "${HUSER}:x:${HUID}:${HGID}::${HHOME}:/bin/bash" >>/etc/passwd
-    sed -i /etc/shadow -e "/^${HUSER}:/ d" # Clean stale entries
-    echo "${HUSER}:*:18463:0:99999:7:::" >>/etc/shadow
-    sed -i /etc/group -e "/^${HUSER}:/ d" # Clean stale entries
-    echo "${HUSER}:x:${HGID}:" >>/etc/group
-    sed -i /etc/gshadow -e "/^${HUSER}:/ d" # Clean stale entries
-    echo "${HUSER}:*::" >>/etc/gshadow
-    for GRP in sudo dialout plugdev video cdrom audio ${ROCKER_GROUPS}; do
-        getent group ${GRP} >/dev/null || continue
-        adduser ${HUSER} ${GRP} >&/dev/null
-    done
 
     # Silence 'sudo: setrlimit(RLIMIT_CORE): Operation not permitted'
     echo Set disable_coredump false > /etc/sudo.conf
