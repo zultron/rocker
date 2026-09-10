@@ -356,17 +356,19 @@ run() {
     fi
 
     # - display, graphics, audio
-    DOCKER_RUN_ARGS+=(
-        -e TERM
-        -e DISPLAY
-        -v /tmp/.X11-unix:/tmp/.X11-unix
-        -v /dev/dri:/dev/dri
-        -v /run/user/$HUID:/run/user/$HUID
-        --device /dev/snd
-        # -v ~/.config/pulse/cookie:/tmp/pulse-cookie
-        # -e PULSE_COOKIE=/tmp/pulse-cookie
-        -e PULSE_SERVER=${XDG_RUNTIME_DIR}/pulse/native
-    )
+    if test "${ROCKER_DISPLAY_CONFIG:-true}" = true; then
+        DOCKER_RUN_ARGS+=(
+            -e TERM
+            -e DISPLAY
+            -v /tmp/.X11-unix:/tmp/.X11-unix
+            -v /dev/dri:/dev/dri
+            -v /run/user/$HUID:/run/user/$HUID
+            --device /dev/snd
+            # -v ~/.config/pulse/cookie:/tmp/pulse-cookie
+            # -e PULSE_COOKIE=/tmp/pulse-cookie
+            -e PULSE_SERVER=${XDG_RUNTIME_DIR}/pulse/native
+        )
+    fi
 
     # - container start-up config
     DOCKER_RUN_ARGS+=(
