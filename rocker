@@ -376,7 +376,7 @@ run() {
         -w ${ROCKER_WORKDIR:-${HERE}}
         -v $ENTRYPOINT:/usr/bin/entrypoint
         -e ROCKER_TRACING_ON=$ROCKER_TRACING_ON
-        -e ROCKER_GROUPS=$ROCKER_GROUPS
+        -e ROCKER_GROUPS="$ROCKER_GROUPS"
         --entrypoint /usr/bin/entrypoint
     )
     if test -n "$ROCKER_ENTRYPOINT_COMMAND"; then
